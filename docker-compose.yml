@@ -35,7 +35,7 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./:/var/www/html
-    command: sh -c "rm -f public/hot && npm install && npm run build && echo 'Build done. Watching for changes...' && npx chokidar 'resources/**/*' -c 'npm run build' --silent"
+    command: sh -c "rm -f public/hot && npm install && npm install -g chokidar-cli && npm run build && echo 'Build done. Watching for changes...' && chokidar 'resources/**/*' -c 'npm run build' --silent"
     networks:
       - timetracking
 

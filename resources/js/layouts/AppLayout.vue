@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600">
+  <div class="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600" :style="backgroundStyle">
     <!-- Navigation -->
     <header class="bg-white/95 backdrop-blur-sm mx-4 mt-4 rounded-2xl shadow-lg px-6 py-4">
       <div class="flex items-center justify-between">
@@ -37,11 +37,40 @@
 </template>
 
 <script setup>
+import { ref, onMounted, computed } from 'vue';
 import { useAuth } from '@/composables/useAuth';
+import axios from 'axios';
 
 const { user, logout } = useAuth();
 
+const backgroundUrl = ref(null);
+
 const navLinks = [
-  { to: '/', label: 'Dashboard' },
+  { to: '/', label: 'Timer' },
+  { to: '/tasks', label: 'Tasks' },
+  { to: '/reports', label: 'Reports' },
+  { to: '/settings', label: 'Settings' },
+  { to: '/automations', label: 'Automation' },
 ];
+
+const backgroundStyle = computed(() => {
+  if (!backgroundUrl.value) return {};
+  return {
+    backgroundImage: `url(${backgroundUrl.value})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+  };
+});
+
+onMounted(async () => {
+  try {
+    const { data } = await axios.get('/settings/background/status');
+    if (data.exists) {
+      backgroundUrl.value = data.url;
+    }
+  } catch {
+    // ignore
+  }
+});
 </script>

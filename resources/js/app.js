@@ -25,8 +25,32 @@ const routes = [
     },
     {
         path: '/',
-        name: 'dashboard',
-        component: () => import('./pages/Dashboard.vue'),
+        name: 'timer',
+        component: () => import('./pages/Timer.vue'),
+        meta: { auth: true },
+    },
+    {
+        path: '/tasks',
+        name: 'tasks',
+        component: () => import('./pages/Tasks.vue'),
+        meta: { auth: true },
+    },
+    {
+        path: '/reports',
+        name: 'reports',
+        component: () => import('./pages/Reports.vue'),
+        meta: { auth: true },
+    },
+    {
+        path: '/settings',
+        name: 'settings',
+        component: () => import('./pages/Settings.vue'),
+        meta: { auth: true },
+    },
+    {
+        path: '/automations',
+        name: 'automations',
+        component: () => import('./pages/Automations.vue'),
         meta: { auth: true },
     },
 ];
@@ -53,7 +77,7 @@ router.beforeEach(async (to, from) => {
     }
 
     if (to.meta.guest && user) {
-        return { name: 'dashboard' };
+        return { name: 'timer' };
     }
 });
 
