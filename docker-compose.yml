@@ -1,0 +1,44 @@
+services:
+  timetracking_app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.local
+    container_name: timetracking_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    environment:
+      - AUTO_MIGRATE=true
+    entrypoint: /var/www/html/docker/entrypoint.sh
+    command: php-fpm
+    networks:
+      - timetracking
+
+  timetracking_web:
+    image: nginx:alpine
+    container_name: timetracking_web
+    restart: unless-stopped
+    ports:
+      - "8077:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - timetracking_app
+    networks:
+      - timetracking
+
+  timetracking_node:
+    image: node:20-alpine
+    container_name: timetracking_node
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    command: sh -c "rm -f public/hot && npm install && npm run build && echo 'Build done. Watching for changes...' && npx chokidar 'resources/**/*' -c 'npm run build' --silent"
+    networks:
+      - timetracking
+
+networks:
+  timetracking:
+    driver: bridge
