@@ -114,17 +114,24 @@ class TimeEntryController extends Controller
 
     public function taskEntries($taskId)
     {
-        $entries = TimeEntry::with('project')
-            ->where('task_id', $taskId)
+        $task = Task::findOrFail($taskId);
+        $subtaskIds = $task->subtasks()->pluck('id')->toArray();
+        $allIds = array_merge([(int) $taskId], $subtaskIds);
+
+        $entries = TimeEntry::with(['project', 'task'])
+            ->whereIn('task_id', $allIds)
             ->orderByDesc('start_time')
             ->get();
 
-        return $entries->map(function ($e) {
+        return $entries->map(function ($e) use ($taskId) {
             $arr = $this->formatEntry($e);
             $duration = $e->end_time
                 ? $e->start_time->diffInMinutes($e->end_time)
                 : $e->start_time->diffInMinutes(now());
             $arr['duration_minutes'] = round($duration, 2);
+            if ($e->task_id !== (int) $taskId) {
+                $arr['subtask_name'] = $e->task?->title;
+            }
             return $arr;
         });
     }

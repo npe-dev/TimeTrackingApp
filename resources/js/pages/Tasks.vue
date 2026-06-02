@@ -13,19 +13,236 @@
           >
             <option v-for="b in boards" :key="b.id" :value="b.id">{{ b.name }}</option>
           </select>
+          <button
+            @click="showNewBoardModal = true"
+            class="px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+          >
+            + New Board
+          </button>
+          <button
+            v-if="board"
+            @click="openEditBoardModal"
+            class="px-3 py-2 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Edit
+          </button>
         </div>
-        <div class="text-sm text-gray-400">
-          {{ board?.columns?.length || 0 }} columns &middot;
-          {{ totalTaskCount }} tasks
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1 relative filter-panel-container">
+            <button
+              @click="toggleFilterPanel"
+              class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors"
+              :class="hasActiveFilters ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Filter
+              <span v-if="hasActiveFilters" class="bg-indigo-500 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center">{{ activeFilterCount }}</span>
+            </button>
+            <button
+              v-if="hasActiveFilters"
+              @click.stop="clearFilters"
+              class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+              title="Clear all filters"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+
+            <!-- Filter Panel -->
+            <div
+              v-if="showFilterPanel"
+              class="absolute right-0 top-10 z-50 bg-white rounded-xl shadow-2xl border border-gray-100 w-72 max-h-[70vh] overflow-y-auto"
+            >
+              <div class="p-3 space-y-3">
+                <!-- Search -->
+                <div>
+                  <input
+                    ref="filterSearchInput"
+                    v-model="filterSearch"
+                    @keydown="onFilterKeydown"
+                    placeholder="Search cards... (press / to focus)"
+                    class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+                  />
+                </div>
+
+                <!-- Matched labels from search -->
+                <div v-if="filterSearch.trim() && matchedLabels.length" class="space-y-1">
+                  <div class="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Matching labels</div>
+                  <button
+                    v-for="ml in matchedLabels"
+                    :key="ml.id"
+                    @click="toggleFilterLabel(ml.id)"
+                    class="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-50 text-left text-xs"
+                  >
+                    <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: ml.color }"></span>
+                    <span class="flex-1">{{ ml.name }}</span>
+                    <span v-if="filterLabelIds.includes(ml.id)" class="text-indigo-500">✓</span>
+                  </button>
+                </div>
+
+                <div class="border-t border-gray-100"></div>
+
+                <!-- Due Date Filters -->
+                <div>
+                  <div class="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">Due date</div>
+                  <div class="space-y-0.5">
+                    <button
+                      v-for="opt in dueDateOptions"
+                      :key="opt.value"
+                      @click="toggleDueDateFilter(opt.value)"
+                      class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors"
+                      :class="filterDueDate === opt.value ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-gray-50 text-gray-600'"
+                    >
+                      <span class="flex-1">{{ opt.label }}</span>
+                      <span v-if="filterDueDate === opt.value" class="text-indigo-500">✓</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="border-t border-gray-100"></div>
+
+                <!-- Labels -->
+                <div>
+                  <div class="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">Labels</div>
+                  <div class="space-y-0.5">
+                    <button
+                      v-for="gl in globalLabels"
+                      :key="gl.id"
+                      @click="toggleFilterLabel(gl.id)"
+                      class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors"
+                      :class="filterLabelIds.includes(gl.id) ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-gray-50 text-gray-600'"
+                    >
+                      <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: gl.color }"></span>
+                      <span class="flex-1">{{ gl.name }}</span>
+                      <span v-if="filterLabelIds.includes(gl.id)" class="text-indigo-500">✓</span>
+                    </button>
+                    <div v-if="!globalLabels.length" class="text-xs text-gray-400 px-2 py-1">No labels</div>
+                  </div>
+                </div>
+
+                <!-- Clear Filters -->
+                <div v-if="hasActiveFilters" class="border-t border-gray-100 pt-2">
+                  <button
+                    @click="clearFilters"
+                    class="w-full text-center text-xs text-red-500 hover:text-red-600 font-medium py-1"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="text-sm text-gray-400">
+            {{ board?.columns?.length || 0 }} columns &middot;
+            {{ totalTaskCount }} tasks
+          </div>
         </div>
       </div>
 
+      <!-- New Board Modal -->
+      <Teleport to="body">
+        <div v-if="showNewBoardModal" class="fixed inset-0 z-50 flex items-center justify-center">
+          <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="showNewBoardModal = false"></div>
+          <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-96">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Create new board</h3>
+            <input
+              v-model="newBoardName"
+              @keydown.enter="createBoard"
+              placeholder="Board name..."
+              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none mb-2"
+            />
+            <input
+              v-model="newBoardDescription"
+              placeholder="Description (optional)"
+              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none mb-4"
+            />
+            <div class="flex justify-end gap-2">
+              <button @click="showNewBoardModal = false" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button
+                @click="createBoard"
+                :disabled="!newBoardName.trim()"
+                class="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all disabled:opacity-50"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <!-- Edit Board Modal -->
+      <Teleport to="body">
+        <div v-if="showEditBoardModal" class="fixed inset-0 z-50 flex items-center justify-center">
+          <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="showEditBoardModal = false"></div>
+          <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-96">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Edit board</h3>
+            <input
+              v-model="editBoardName"
+              @keydown.enter="updateBoard"
+              placeholder="Board name..."
+              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none mb-2"
+            />
+            <input
+              v-model="editBoardDescription"
+              placeholder="Description (optional)"
+              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none mb-4"
+            />
+            <div class="flex items-center gap-2">
+              <button
+                v-if="boards.length > 1"
+                @click="showEditBoardModal = false; showDeleteBoardConfirm = true"
+                class="px-4 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-all"
+              >
+                Delete Board
+              </button>
+              <div class="flex-1"></div>
+              <button @click="showEditBoardModal = false" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button
+                @click="updateBoard"
+                :disabled="!editBoardName.trim()"
+                class="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <!-- Delete Board Confirmation -->
+      <Teleport to="body">
+        <div v-if="showDeleteBoardConfirm" class="fixed inset-0 z-50 flex items-center justify-center">
+          <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="showDeleteBoardConfirm = false"></div>
+          <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-96">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Delete board</h3>
+            <p class="text-sm text-gray-500 mb-4">
+              Are you sure you want to delete <strong>{{ board?.name }}</strong>? All columns and tasks in this board will be permanently deleted.
+            </p>
+            <div class="flex justify-end gap-2">
+              <button @click="showDeleteBoardConfirm = false" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button
+                @click="deleteBoard"
+                class="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
       <!-- Kanban Board -->
-      <div class="flex gap-4 overflow-x-auto pb-4 items-start" style="min-height: 70vh;">
+      <div
+        ref="boardContainer"
+        class="board-container flex gap-4 pb-4 items-start"
+        style="min-height: 70vh;"
+        @mousedown="onBoardMouseDown"
+      >
 
         <!-- Columns -->
         <div
-          v-for="column in columns"
+          v-for="column in filteredColumns"
           :key="column.id"
           class="flex-shrink-0 w-80"
         >
@@ -80,45 +297,48 @@
 
             <!-- Tasks Container -->
             <div
-              class="flex-1 overflow-y-auto p-2 space-y-0.5"
+              class="flex-1 overflow-y-auto p-2 pt-1 tasks-list"
+              :class="{ 'column-drag-over': dropTarget?.columnId === column.id }"
               @dragover.prevent="onDragOver($event, column.id)"
-              @dragleave="onDragLeave(column.id)"
+              @dragleave="onDragLeave($event, column.id)"
               @drop="onDrop($event, column.id)"
               :data-column-id="column.id"
             >
               <template v-for="(task, idx) in (column.tasks || [])" :key="task.id">
-                <!-- Drop indicator before card -->
+                <!-- Drop placeholder before card -->
                 <div
-                  v-if="dropTarget?.columnId === column.id && dropTarget?.position === idx"
-                  class="h-1 bg-indigo-400 rounded-full mx-2 my-1 transition-all"
-                ></div>
+                  v-if="dropTarget?.columnId === column.id && dropTarget?.position === idx && draggedTask?.id !== task.id"
+                  class="drop-placeholder"
+                  :style="{ height: draggedCardHeight + 'px' }"
+                >
+                  <span class="text-xs text-indigo-400 font-medium">Drop here</span>
+                </div>
 
-                <!-- Task Card -->
+                <!-- Task Card (Parent) -->
                 <div
                   :draggable="true"
                   @dragstart="onDragStart($event, task, column.id)"
                   @dragend="onDragEnd"
-                  class="bg-white rounded-xl border border-gray-100 shadow-sm p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group"
-                  :class="{ 'opacity-40': draggedTask?.id === task.id }"
+                  class="task-card bg-white rounded-lg border border-gray-200 shadow-sm p-3 cursor-move group"
+                  :class="{ 'task-card-done': isDoneColumn(column.id) }"
                   @click="openTaskModal(task)"
                 >
                   <!-- Card Top Row -->
-                  <div class="flex items-start justify-between gap-2 mb-1">
-                    <h4 class="text-sm font-medium text-gray-800 flex-1 leading-snug">{{ task.title }}</h4>
-                    <span class="text-sm flex-shrink-0" :title="priorityLabel(task.priority)">
+                  <div class="flex items-start gap-2 mb-1 -mx-3 -mt-3 px-3 pt-3 pb-1 rounded-t-lg"
+                    :style="task.labels && task.labels.length ? { backgroundColor: task.labels[0].color + '18' } : {}"
+                  >
+                    <input
+                      type="radio"
+                      class="task-done-radio"
+                      :checked="isDoneColumn(column.id)"
+                      :disabled="isDoneColumn(column.id)"
+                      @click.stop.prevent="markTaskDone(task)"
+                    />
+                    <h4 class="text-sm font-medium flex-1 leading-snug"
+                      :class="isDoneColumn(column.id) ? 'line-through text-gray-400' : 'text-gray-800'"
+                    >{{ task.title }}</h4>
+                    <span v-if="priorityEmoji(task.priority)" class="text-sm flex-shrink-0" :title="priorityLabel(task.priority)">
                       {{ priorityEmoji(task.priority) }}
-                    </span>
-                  </div>
-
-                  <!-- Labels -->
-                  <div v-if="task.labels && task.labels.length" class="flex flex-wrap gap-1 mb-2">
-                    <span
-                      v-for="label in task.labels"
-                      :key="label.id"
-                      class="text-xs px-2 py-0.5 rounded-full font-medium"
-                      :style="{ backgroundColor: label.color + '20', color: label.color }"
-                    >
-                      {{ label.name }}
                     </span>
                   </div>
 
@@ -137,13 +357,23 @@
                         </svg>
                         {{ formatDate(task.due_date) }}
                       </span>
+                      <!-- Subtask count -->
+                      <span v-if="task.subtasks && task.subtasks.length" class="flex items-center gap-1"
+                        :class="subtaskDoneCount(task) === task.subtasks.length ? 'text-green-500' : ''"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/>
+                        </svg>
+                        {{ subtaskDoneCount(task) }}/{{ task.subtasks.length }}
+                      </span>
                       <!-- Project -->
                       <span v-if="task.project" class="truncate max-w-[100px]" :title="task.project.name">
                         {{ task.project.name }}
                       </span>
                     </div>
-                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <!-- Timer button -->
+                    <div class="flex items-center gap-1 transition-opacity"
+                      :class="isTimerRunningForTask(task.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+                    >
                       <button
                         @click.stop="toggleTaskTimer(task)"
                         class="p-1 rounded-lg transition-colors"
@@ -159,26 +389,55 @@
                           <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                         </svg>
                       </button>
-                      <!-- Mark done -->
-                      <button
-                        @click.stop="markTaskDone(task)"
-                        class="p-1 rounded-lg text-gray-400 hover:bg-green-50 hover:text-green-500 transition-colors"
-                        title="Mark as done"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </button>
                     </div>
                   </div>
                 </div>
+
+                <!-- Subtask Cards -->
+                <template v-for="subtask in visibleSubtasks(task)" :key="'sub-' + subtask.id">
+                  <div
+                    class="subtask-card bg-gray-50 rounded-lg border border-gray-200 shadow-sm p-2.5 ml-6 group"
+                  >
+                    <div class="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        class="subtask-done-checkbox"
+                        :checked="isSubtaskDone(subtask)"
+                        @click.stop="markSubtaskDone(subtask, task)"
+                      />
+                      <h4 class="text-xs font-medium text-gray-700 flex-1 leading-snug truncate">{{ subtask.title }}</h4>
+                      <div class="flex items-center gap-1 transition-opacity"
+                        :class="isTimerRunningForTask(subtask.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+                      >
+                        <button
+                          @click.stop="toggleTaskTimer(subtask)"
+                          class="p-0.5 rounded transition-colors"
+                          :class="isTimerRunningForTask(subtask.id)
+                            ? 'text-red-500 hover:bg-red-50'
+                            : 'text-gray-400 hover:bg-indigo-50 hover:text-indigo-500'"
+                          :title="isTimerRunningForTask(subtask.id) ? 'Stop timer' : 'Start timer'"
+                        >
+                          <svg v-if="!isTimerRunningForTask(subtask.id)" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                          </svg>
+                          <svg v-else class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
               </template>
 
-              <!-- Drop indicator at bottom -->
+              <!-- Drop placeholder at bottom -->
               <div
-                v-if="dropTarget?.columnId === column.id && dropTarget?.position === (column.tasks || []).length"
-                class="h-1 bg-indigo-400 rounded-full mx-2 my-1 transition-all"
-              ></div>
+                v-if="dropTarget?.columnId === column.id && dropTarget?.position >= (column.tasks || []).length"
+                class="drop-placeholder"
+                :style="{ height: draggedCardHeight + 'px' }"
+              >
+                <span class="text-xs text-indigo-400 font-medium">Drop here</span>
+              </div>
 
               <!-- Empty column hint -->
               <div
@@ -314,7 +573,7 @@
 
       <!-- Task Modal -->
       <Teleport to="body">
-        <div v-if="modalTask" class="fixed inset-0 z-50 flex items-center justify-center" @keydown="onModalKeydown">
+        <div v-if="modalTask" class="fixed inset-0 z-50 flex items-center justify-center" tabindex="0" ref="modalOverlay" @keydown="onModalKeydown">
           <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="closeTaskModal"></div>
           <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
             <div class="p-6 space-y-5">
@@ -334,8 +593,8 @@
                   @click="cyclePriority"
                   class="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors"
                 >
-                  <span>{{ priorityEmoji(modalTask.priority) }}</span>
-                  <span class="text-gray-600 capitalize">{{ modalTask.priority || 'low' }}</span>
+                  <span v-if="priorityEmoji(modalTask.priority)">{{ priorityEmoji(modalTask.priority) }}</span>
+                  <span class="text-gray-600 capitalize">{{ modalTask.priority || 'none' }}</span>
                 </button>
 
                 <!-- Due Date -->
@@ -368,21 +627,31 @@
                 <div class="flex items-center justify-between mb-2">
                   <h4 class="text-sm font-semibold text-gray-600">Description</h4>
                   <button
-                    @click="descriptionPreview = !descriptionPreview"
-                    class="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+                    @click="editingDescription ? exitEditDescription() : startEditDescription()"
+                    class="text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
+                    :class="editingDescription
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'"
                   >
-                    {{ descriptionPreview ? 'Edit' : 'Preview' }}
+                    {{ editingDescription ? '✏️ Editing' : '👁️ Viewing' }}
                   </button>
                 </div>
-                <div v-if="descriptionPreview" class="prose prose-sm max-w-none p-3 bg-gray-50 rounded-lg min-h-[80px]" v-html="renderMarkdown(modalTask.description || '')"></div>
                 <textarea
-                  v-else
+                  v-if="editingDescription"
+                  ref="descriptionTextarea"
                   v-model="modalTask.description"
                   @input="debouncedSave"
-                  placeholder="Add a description... (supports **bold**, *italic*, `code`, [links](url))"
-                  rows="4"
-                  class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none resize-y"
+                  placeholder="Add a description... (supports **bold**, *italic*, `code`, [links](url), # headings)"
+                  rows="6"
+                  class="w-full rounded-lg border border-indigo-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none resize-y"
                 ></textarea>
+                <div
+                  v-else
+                  @dblclick="startEditDescription"
+                  class="prose prose-sm max-w-none p-3 bg-gray-50 rounded-lg min-h-[80px] cursor-text hover:bg-gray-100 transition-colors"
+                  :class="{ 'text-gray-400 italic': !modalTask.description }"
+                  v-html="modalTask.description ? renderMarkdown(modalTask.description) : 'Double-click to add a description...'"
+                ></div>
               </div>
 
               <!-- Labels -->
@@ -395,7 +664,7 @@
                     class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium"
                     :style="{ backgroundColor: label.color + '20', color: label.color }"
                   >
-                    {{ label.name }}
+                    {{ label.label || label.global_label?.name }}
                     <button
                       @click="removeLabel(label.id)"
                       class="hover:opacity-70 ml-0.5"
@@ -415,84 +684,96 @@
                     v-if="showLabelPicker"
                     class="absolute left-0 top-6 z-10 bg-white rounded-xl shadow-xl border border-gray-100 p-3 w-64 max-h-48 overflow-y-auto"
                   >
-                    <div v-if="!availableLabels.length" class="text-xs text-gray-400">No global labels available</div>
+                    <div v-if="!globalLabels.length" class="text-xs text-gray-400">No global labels available</div>
                     <button
-                      v-for="gl in availableLabels"
+                      v-for="(gl, glIdx) in globalLabels"
                       :key="gl.id"
-                      @click="addLabel(gl)"
+                      @click="toggleLabelByIndex(glIdx)"
                       class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 text-left text-sm"
+                      :class="isLabelApplied(gl) ? 'bg-indigo-50' : ''"
                     >
+                      <span v-if="glIdx < 9" class="text-[10px] text-gray-400 font-mono w-3 text-center shrink-0">{{ glIdx + 1 }}</span>
                       <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: gl.color }"></span>
-                      {{ gl.name }}
+                      <span class="flex-1">{{ gl.name }}</span>
+                      <span v-if="isLabelApplied(gl)" class="text-indigo-500 text-xs">✓</span>
                     </button>
                   </div>
                 </div>
               </div>
 
-              <!-- Checklist -->
-              <div>
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">Checklist</h4>
-                <!-- Progress bar -->
-                <div v-if="(modalTask.checklist_items || []).length" class="mb-2">
-                  <div class="flex items-center gap-2 mb-1">
-                    <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all"
-                        :style="{ width: checklistProgress + '%' }"
-                      ></div>
-                    </div>
-                    <span class="text-xs text-gray-400">{{ checklistProgress }}%</span>
-                  </div>
-                </div>
-                <!-- Items -->
+              <!-- Subtasks -->
+              <div v-if="!modalTask.parent_task_id">
+                <h4 class="text-sm font-semibold text-gray-600 mb-2">Subtasks</h4>
                 <div class="space-y-1 mb-2">
                   <div
-                    v-for="item in (modalTask.checklist_items || [])"
-                    :key="item.id"
-                    class="flex items-center gap-2 group"
+                    v-for="(st, stIndex) in (modalTask.subtasks || [])"
+                    :key="st.id"
+                    class="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded-lg group/st"
                   >
-                    <button
-                      @click="toggleChecklistItem(item)"
-                      class="flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
-                      :class="item.completed
-                        ? 'bg-indigo-500 border-indigo-500 text-white'
-                        : 'border-gray-300 hover:border-indigo-400'"
-                    >
-                      <svg v-if="item.completed" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
+                    <div class="flex flex-col -my-1">
+                      <button
+                        @click="moveSubtask(stIndex, -1)"
+                        :disabled="stIndex === 0"
+                        class="p-0 text-gray-300 hover:text-indigo-500 disabled:opacity-20 disabled:cursor-default leading-none"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                      </button>
+                      <button
+                        @click="moveSubtask(stIndex, 1)"
+                        :disabled="stIndex === (modalTask.subtasks || []).length - 1"
+                        class="p-0 text-gray-300 hover:text-indigo-500 disabled:opacity-20 disabled:cursor-default leading-none"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                      </button>
+                    </div>
+                    <input
+                      type="checkbox"
+                      class="subtask-done-checkbox"
+                      :checked="isSubtaskDone(st)"
+                      @change="toggleSubtaskDoneFromModal(st)"
+                    />
+                    <input
+                      v-if="editingSubtaskId === st.id"
+                      v-model="editingSubtaskTitle"
+                      @blur="saveSubtaskRename(st)"
+                      @keydown.enter="saveSubtaskRename(st)"
+                      @keydown.escape="editingSubtaskId = null"
+                      class="subtask-rename-input text-sm flex-1 border border-indigo-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-indigo-200"
+                    />
                     <span
-                      class="flex-1 text-sm"
-                      :class="item.completed ? 'line-through text-gray-400' : 'text-gray-700'"
-                    >
-                      {{ item.title }}
-                    </span>
+                      v-else
+                      class="text-sm flex-1 cursor-pointer hover:text-indigo-600"
+                      :class="isSubtaskDone(st) ? 'line-through text-gray-400' : 'text-gray-700'"
+                      @dblclick="startSubtaskRename(st)"
+                    >{{ st.title }}</span>
                     <button
-                      @click="deleteChecklistItem(item.id)"
-                      class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-0.5"
+                      v-if="editingSubtaskId !== st.id"
+                      @click="startSubtaskRename(st)"
+                      class="p-0.5 text-gray-300 hover:text-indigo-500 opacity-0 group-hover/st:opacity-100 transition-all"
+                      title="Rename"
                     >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    </button>
+                    <button
+                      @click="deleteSubtask(st)"
+                      class="p-0.5 text-gray-300 hover:text-red-500 opacity-0 group-hover/st:opacity-100 transition-all"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                   </div>
                 </div>
-                <!-- Add Checklist Item -->
                 <div class="flex gap-2">
                   <input
-                    v-model="newChecklistTitle"
-                    @keydown.enter="addChecklistItem"
-                    placeholder="Add item..."
-                    class="flex-1 text-sm rounded-lg border border-gray-200 px-3 py-1.5 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+                    v-model="newSubtaskTitle"
+                    @keydown.enter="addSubtask"
+                    placeholder="Add a subtask..."
+                    class="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
                   />
                   <button
-                    @click="addChecklistItem"
-                    :disabled="!newChecklistTitle.trim()"
-                    class="text-xs font-medium text-indigo-500 hover:text-indigo-700 disabled:text-gray-300 px-2"
-                  >
-                    Add
-                  </button>
+                    @click="addSubtask"
+                    :disabled="!newSubtaskTitle.trim()"
+                    class="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all disabled:opacity-50"
+                  >Add</button>
                 </div>
               </div>
 
@@ -597,7 +878,10 @@
                     :key="entry.id"
                     class="flex items-center justify-between text-xs text-gray-500 py-1 px-2 bg-gray-50 rounded-lg"
                   >
-                    <span>{{ formatDateTime(entry.start_time) }}</span>
+                    <div class="flex items-center gap-1">
+                      <span>{{ formatDateTime(entry.start_time) }}</span>
+                      <span v-if="entry.subtask_name" class="text-indigo-500 text-[10px] font-medium px-1 bg-indigo-50 rounded">{{ entry.subtask_name }}</span>
+                    </div>
                     <span v-if="entry.end_time">{{ formatDuration(entryDuration(entry)) }}</span>
                     <span v-else class="text-green-500 font-medium">Running...</span>
                   </div>
@@ -656,13 +940,141 @@ const { runningEntry, checkRunning, start: startTimer, stop: stopTimer } = useTi
 // ─── Board State ───────────────────────────────────────────────────
 
 const boards = ref([]);
-const selectedBoardId = ref(null);
+const selectedBoardId = ref(sessionStorage.getItem('selectedBoardId') ? Number(sessionStorage.getItem('selectedBoardId')) : null);
 const board = ref(null);
+
+watch(selectedBoardId, (id) => {
+  if (id) sessionStorage.setItem('selectedBoardId', id);
+  else sessionStorage.removeItem('selectedBoardId');
+});
 
 const columns = computed(() => board.value?.columns || []);
 const totalTaskCount = computed(() =>
   columns.value.reduce((sum, c) => sum + (c.tasks || []).length, 0)
 );
+
+const showNewBoardModal = ref(false);
+const newBoardName = ref('');
+const newBoardDescription = ref('');
+const showEditBoardModal = ref(false);
+const editBoardName = ref('');
+const editBoardDescription = ref('');
+const showDeleteBoardConfirm = ref(false);
+
+// ─── Filters ──────────────────────────────────────────────────────
+const showFilterPanel = ref(false);
+const filterSearch = ref('');
+const filterSearchInput = ref(null);
+const filterDueDate = ref('');
+const filterLabelIds = ref([]);
+
+const dueDateOptions = [
+  { value: 'none', label: 'No due date' },
+  { value: 'overdue', label: 'Overdue' },
+  { value: 'day', label: 'Due in next day' },
+  { value: 'week', label: 'Due in next week' },
+  { value: 'month', label: 'Due in next month' },
+];
+
+const matchedLabels = computed(() => {
+  const q = filterSearch.value.trim().toLowerCase();
+  if (!q) return [];
+  return globalLabels.value.filter(gl => gl.name.toLowerCase().includes(q));
+});
+
+const hasActiveFilters = computed(() =>
+  filterSearch.value.trim() !== '' || filterDueDate.value !== '' || filterLabelIds.value.length > 0
+);
+
+const activeFilterCount = computed(() => {
+  let n = 0;
+  if (filterSearch.value.trim()) n++;
+  if (filterDueDate.value) n++;
+  n += filterLabelIds.value.length;
+  return n;
+});
+
+function toggleFilterLabel(id) {
+  const idx = filterLabelIds.value.indexOf(id);
+  if (idx >= 0) {
+    filterLabelIds.value.splice(idx, 1);
+  } else {
+    filterLabelIds.value.push(id);
+  }
+}
+
+function toggleDueDateFilter(value) {
+  filterDueDate.value = filterDueDate.value === value ? '' : value;
+}
+
+function toggleFilterPanel() {
+  showFilterPanel.value = !showFilterPanel.value;
+  if (showFilterPanel.value) {
+    nextTick(() => filterSearchInput.value?.focus());
+  }
+}
+
+function clearFilters() {
+  filterSearch.value = '';
+  filterDueDate.value = '';
+  filterLabelIds.value = [];
+}
+
+function taskMatchesFilters(task) {
+  // Text search
+  const q = filterSearch.value.trim().toLowerCase();
+  if (q && !task.title.toLowerCase().includes(q)) return false;
+
+  // Due date filter
+  if (filterDueDate.value) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const due = task.due_date ? new Date(task.due_date) : null;
+
+    switch (filterDueDate.value) {
+      case 'none':
+        if (due) return false;
+        break;
+      case 'overdue':
+        if (!due || due >= today) return false;
+        break;
+      case 'day': {
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        if (!due || due < today || due > tomorrow) return false;
+        break;
+      }
+      case 'week': {
+        const nextWeek = new Date(today);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        if (!due || due < today || due > nextWeek) return false;
+        break;
+      }
+      case 'month': {
+        const nextMonth = new Date(today);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        if (!due || due < today || due > nextMonth) return false;
+        break;
+      }
+    }
+  }
+
+  // Label filter
+  if (filterLabelIds.value.length > 0) {
+    const taskLabelIds = (task.labels || []).map(l => l.global_label_id || l.id);
+    if (!filterLabelIds.value.some(id => taskLabelIds.includes(id))) return false;
+  }
+
+  return true;
+}
+
+const filteredColumns = computed(() => {
+  if (!hasActiveFilters.value) return columns.value;
+  return columns.value.map(col => ({
+    ...col,
+    tasks: (col.tasks || []).filter(taskMatchesFilters),
+  }));
+});
 
 async function loadBoards() {
   boards.value = await api.get('/boards');
@@ -671,6 +1083,50 @@ async function loadBoards() {
   }
   if (selectedBoardId.value) {
     await loadBoard();
+  }
+}
+
+async function createBoard() {
+  if (!newBoardName.value.trim()) return;
+  const created = await api.post('/boards', {
+    name: newBoardName.value.trim(),
+    description: newBoardDescription.value.trim(),
+  });
+  boards.value.unshift(created);
+  selectedBoardId.value = created.id;
+  showNewBoardModal.value = false;
+  newBoardName.value = '';
+  newBoardDescription.value = '';
+  await loadBoard();
+}
+
+function openEditBoardModal() {
+  editBoardName.value = board.value.name;
+  editBoardDescription.value = board.value.description || '';
+  showEditBoardModal.value = true;
+}
+
+async function updateBoard() {
+  if (!editBoardName.value.trim()) return;
+  const updated = await api.put(`/boards/${selectedBoardId.value}`, {
+    name: editBoardName.value.trim(),
+    description: editBoardDescription.value.trim(),
+  });
+  const idx = boards.value.findIndex(b => b.id === updated.id);
+  if (idx >= 0) boards.value[idx] = { ...boards.value[idx], ...updated };
+  if (board.value) board.value.name = updated.name;
+  showEditBoardModal.value = false;
+}
+
+async function deleteBoard() {
+  await api.del(`/boards/${selectedBoardId.value}`);
+  boards.value = boards.value.filter(b => b.id !== selectedBoardId.value);
+  selectedBoardId.value = boards.value.length ? boards.value[0].id : null;
+  showDeleteBoardConfirm.value = false;
+  if (selectedBoardId.value) {
+    await loadBoard();
+  } else {
+    board.value = null;
   }
 }
 
@@ -684,6 +1140,12 @@ async function loadBoard() {
         col.tasks = await api.get(`/columns/${col.id}/tasks`);
       })
     );
+  }
+  // Load global labels for filters
+  try {
+    globalLabels.value = await api.get('/global-labels');
+  } catch {
+    globalLabels.value = [];
   }
 }
 
@@ -797,7 +1259,10 @@ const newTaskInput = ref(null);
 function startAddTask(columnId) {
   addingTaskColumnId.value = columnId;
   newTaskTitle.value = '';
-  nextTick(() => newTaskInput.value?.focus());
+  nextTick(() => {
+    const el = Array.isArray(newTaskInput.value) ? newTaskInput.value[0] : newTaskInput.value;
+    el?.focus();
+  });
 }
 
 function cancelAddTask() {
@@ -818,7 +1283,16 @@ async function createTask(columnId) {
   await loadBoard();
 }
 
+function isDoneColumn(columnId) {
+  const lastCol = columns.value[columns.value.length - 1];
+  return lastCol && lastCol.id === columnId;
+}
+
 async function markTaskDone(task) {
+  // Stop timer if running on this task
+  if (isTimerRunningForTask(task.id)) {
+    await stopTimer();
+  }
   // Move to last column (assumed to be "Done")
   const lastColumn = columns.value[columns.value.length - 1];
   if (!lastColumn) return;
@@ -834,15 +1308,58 @@ async function markTaskDone(task) {
 const draggedTask = ref(null);
 const dragSourceColumnId = ref(null);
 const dropTarget = ref(null);
+const draggedCardHeight = ref(60);
+let draggedCardEl = null;
 
 function onDragStart(event, task, columnId) {
   draggedTask.value = task;
   dragSourceColumnId.value = columnId;
   event.dataTransfer.effectAllowed = 'move';
-  event.dataTransfer.setData('text/plain', task.id);
+  event.dataTransfer.setData('text/plain', String(task.id));
+
+  // Capture the card element and height
+  draggedCardEl = event.target.closest('.task-card');
+  if (draggedCardEl) {
+    draggedCardHeight.value = draggedCardEl.offsetHeight;
+  }
+
+  // Capture subtask card heights too
+  const subtaskCount = visibleSubtasks(task).length;
+  if (subtaskCount && draggedCardEl) {
+    // Include subtask height in placeholder
+    let nextEl = draggedCardEl.nextElementSibling;
+    let extraHeight = 0;
+    for (let i = 0; i < subtaskCount && nextEl; i++) {
+      if (nextEl.classList.contains('subtask-card')) {
+        extraHeight += nextEl.offsetHeight + 8; // card + margin
+      }
+      nextEl = nextEl.nextElementSibling;
+    }
+    draggedCardHeight.value += extraHeight;
+  }
+
+  // Let the browser capture the drag ghost image, THEN hide the card
+  requestAnimationFrame(() => {
+    if (draggedCardEl && draggedTask.value?.id === task.id) {
+      draggedCardEl.classList.add('dragging');
+      // Also hide subtask cards
+      let nextEl = draggedCardEl.nextElementSibling;
+      while (nextEl && nextEl.classList.contains('subtask-card')) {
+        nextEl.classList.add('dragging');
+        nextEl = nextEl.nextElementSibling;
+      }
+    }
+  });
 }
 
 function onDragEnd() {
+  // Restore the card + subtask visibility
+  if (draggedCardEl) {
+    draggedCardEl.classList.remove('dragging');
+    // Unhide subtask cards
+    document.querySelectorAll('.subtask-card.dragging').forEach(el => el.classList.remove('dragging'));
+    draggedCardEl = null;
+  }
   draggedTask.value = null;
   dragSourceColumnId.value = null;
   dropTarget.value = null;
@@ -850,27 +1367,83 @@ function onDragEnd() {
 
 function onDragOver(event, columnId) {
   event.dataTransfer.dropEffect = 'move';
+  if (!draggedTask.value) return;
+
   const col = columns.value.find(c => c.id === columnId);
   if (!col) return;
 
   const container = event.currentTarget;
-  const cards = Array.from(container.querySelectorAll('[draggable="true"]'));
   const mouseY = event.clientY;
 
-  let position = (col.tasks || []).length;
-  for (let i = 0; i < cards.length; i++) {
-    const rect = cards[i].getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    if (mouseY < midY) {
-      position = i;
-      break;
+  // Get visible parent task cards (not dragged, not subtasks)
+  const parentCards = Array.from(container.querySelectorAll('.task-card:not(.dragging)'));
+
+  // For each parent card, compute its group bounds (parent + visible subtasks below it)
+  const groups = parentCards.map(card => {
+    const top = card.getBoundingClientRect().top;
+    let bottom = card.getBoundingClientRect().bottom;
+    let next = card.nextElementSibling;
+    while (next && next.classList.contains('subtask-card') && !next.classList.contains('dragging')) {
+      bottom = next.getBoundingClientRect().bottom;
+      next = next.nextElementSibling;
+    }
+    return { top, bottom };
+  });
+
+  // Build slots (gaps between task groups)
+  const slots = [];
+  for (let i = 0; i <= groups.length; i++) {
+    let slotY;
+    if (groups.length === 0) {
+      const cr = container.getBoundingClientRect();
+      slotY = cr.top + cr.height / 2;
+    } else if (i === 0) {
+      slotY = groups[0].top;
+    } else if (i === groups.length) {
+      slotY = groups[groups.length - 1].bottom;
+    } else {
+      slotY = (groups[i - 1].bottom + groups[i].top) / 2;
+    }
+    slots.push({ index: i, slotY });
+  }
+
+  // Find closest slot to mouse
+  let bestSlot = slots[0];
+  let bestDist = Math.abs(mouseY - bestSlot.slotY);
+  for (let s = 1; s < slots.length; s++) {
+    const dist = Math.abs(mouseY - slots[s].slotY);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestSlot = slots[s];
     }
   }
 
-  dropTarget.value = { columnId, position };
+  // Map visible slot index back to data index (account for hidden dragged card)
+  const tasks = col.tasks || [];
+  let dataIndex = bestSlot.index;
+  if (dragSourceColumnId.value === columnId) {
+    let visibleCount = 0;
+    let actualIndex = 0;
+    for (let t = 0; t < tasks.length; t++) {
+      if (tasks[t].id === draggedTask.value.id) continue;
+      if (visibleCount === bestSlot.index) {
+        actualIndex = t;
+        break;
+      }
+      visibleCount++;
+      actualIndex = t + 1;
+    }
+    dataIndex = actualIndex;
+  }
+
+  dropTarget.value = { columnId, position: dataIndex };
 }
 
-function onDragLeave(columnId) {
+function onDragLeave(event, columnId) {
+  // Only clear if we actually left the container
+  const container = event.currentTarget;
+  const related = event.relatedTarget;
+  if (related && container.contains(related)) return;
   if (dropTarget.value?.columnId === columnId) {
     dropTarget.value = null;
   }
@@ -880,28 +1453,55 @@ async function onDrop(event, columnId) {
   event.preventDefault();
   if (!draggedTask.value || !dropTarget.value) return;
 
+  const taskId = draggedTask.value.id;
   const { position } = dropTarget.value;
-  await api.patch(`/tasks/${draggedTask.value.id}/move`, {
-    column_id: columnId,
-    position,
-  });
+  const sourceColumnId = dragSourceColumnId.value;
 
+  // Optimistic local move
+  const sourceCol = columns.value.find(c => c.id === sourceColumnId);
+  const destCol = columns.value.find(c => c.id === columnId);
+  if (sourceCol && destCol) {
+    const taskIndex = (sourceCol.tasks || []).findIndex(t => t.id === taskId);
+    if (taskIndex >= 0) {
+      const [movedTask] = sourceCol.tasks.splice(taskIndex, 1);
+      movedTask.column_id = columnId;
+      if (!destCol.tasks) destCol.tasks = [];
+      const insertAt = Math.min(position, destCol.tasks.length);
+      destCol.tasks.splice(insertAt, 0, movedTask);
+    }
+  }
+
+  // Clear drag state
   draggedTask.value = null;
   dragSourceColumnId.value = null;
   dropTarget.value = null;
+
+  // Persist to API then refresh
+  try {
+    await api.patch(`/tasks/${taskId}/move`, {
+      column_id: columnId,
+      position,
+    });
+  } catch (err) {
+    console.error('Failed to move task:', err);
+  }
   await loadBoard();
 }
 
 // ─── Task Modal ────────────────────────────────────────────────────
 
 const modalTask = ref(null);
-const descriptionPreview = ref(false);
+const modalOverlay = ref(null);
+const editingDescription = ref(false);
+const descriptionTextarea = ref(null);
 const showLabelPicker = ref(false);
 const globalLabels = ref([]);
 const confirmingDelete = ref(false);
 
-// Checklist
-const newChecklistTitle = ref('');
+// Subtasks
+const newSubtaskTitle = ref('');
+const editingSubtaskId = ref(null);
+const editingSubtaskTitle = ref('');
 
 // Links
 const addingLink = ref(false);
@@ -910,13 +1510,6 @@ const newLinkUrl = ref('');
 
 // Time entries
 const modalTaskTimeEntries = ref([]);
-
-const checklistProgress = computed(() => {
-  const items = modalTask.value?.checklist_items || [];
-  if (!items.length) return 0;
-  const done = items.filter(i => i.completed).length;
-  return Math.round((done / items.length) * 100);
-});
 
 const modalTaskTotalTime = computed(() => {
   return modalTaskTimeEntries.value.reduce((sum, e) => sum + entryDuration(e), 0);
@@ -928,17 +1521,22 @@ const availableLabels = computed(() => {
 });
 
 async function openTaskModal(task) {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  modalDirty = false;
   confirmingDelete.value = false;
-  descriptionPreview.value = false;
+  editingDescription.value = false;
   showLabelPicker.value = false;
   addingLink.value = false;
-  newChecklistTitle.value = '';
+  newSubtaskTitle.value = '';
   newLinkTitle.value = '';
   newLinkUrl.value = '';
 
   // Load full task data
   const fullTask = await api.get(`/tasks/${task.id}`);
-  modalTask.value = { ...fullTask };
+  modalTask.value = {
+    ...fullTask,
+    due_date: fullTask.due_date ? fullTask.due_date.substring(0, 10) : null,
+  };
 
   // Load time entries
   try {
@@ -953,20 +1551,30 @@ async function openTaskModal(task) {
   } catch {
     globalLabels.value = [];
   }
+
+  // Focus modal overlay so keyboard shortcuts work
+  nextTick(() => {
+    modalOverlay.value?.focus();
+  });
 }
 
-function closeTaskModal() {
-  if (modalTask.value) {
-    saveModalTask();
+async function closeTaskModal() {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  if (modalTask.value && modalDirty) {
+    await saveModalTask();
   }
   modalTask.value = null;
   modalTaskTimeEntries.value = [];
+  modalDirty = false;
+  await loadBoard();
 }
 
 // Auto-save debounce
 let saveTimeout = null;
+let modalDirty = false;
 
 function debouncedSave() {
+  modalDirty = true;
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => saveModalTask(), 1000);
 }
@@ -981,22 +1589,28 @@ async function saveModalTask() {
       priority: modalTask.value.priority,
       due_date: modalTask.value.due_date || null,
       project_id: modalTask.value.project_id || null,
+      column_id: modalTask.value.column_id,
+      position: modalTask.value.position,
     });
-    await loadBoard();
+    modalDirty = false;
   } catch (err) {
     console.error('Failed to save task:', err);
   }
 }
 
 function cyclePriority() {
-  const order = ['low', 'medium', 'high'];
-  const current = modalTask.value.priority || 'low';
+  const order = ['none', 'low', 'medium', 'high'];
+  const current = modalTask.value.priority || 'none';
   const idx = order.indexOf(current);
   modalTask.value.priority = order[(idx + 1) % order.length];
   debouncedSave();
 }
 
 // Labels
+function isLabelApplied(gl) {
+  return (modalTask.value?.labels || []).some(l => (l.global_label_id || l.id) === gl.id);
+}
+
 async function addLabel(globalLabel) {
   showLabelPicker.value = false;
   await api.post(`/tasks/${modalTask.value.id}/labels`, {
@@ -1013,25 +1627,92 @@ async function removeLabel(labelId) {
   await loadBoard();
 }
 
-// Checklist
-async function addChecklistItem() {
-  const title = newChecklistTitle.value.trim();
-  if (!title) return;
-  const position = (modalTask.value.checklist_items || []).length;
-  const item = await api.post(`/tasks/${modalTask.value.id}/checklist`, { title, position });
-  if (!modalTask.value.checklist_items) modalTask.value.checklist_items = [];
-  modalTask.value.checklist_items.push(item);
-  newChecklistTitle.value = '';
+// Subtasks
+function isSubtaskDone(subtask) {
+  return subtask._done || !!subtask.completed_at;
 }
 
-async function toggleChecklistItem(item) {
-  await api.patch(`/checklist/${item.id}/toggle`);
-  item.completed = !item.completed;
+function subtaskDoneCount(task) {
+  return (task.subtasks || []).filter(st => isSubtaskDone(st)).length;
 }
 
-async function deleteChecklistItem(id) {
-  await api.del(`/checklist/${id}`);
-  modalTask.value.checklist_items = (modalTask.value.checklist_items || []).filter(i => i.id !== id);
+function visibleSubtasks(task) {
+  return (task.subtasks || []).filter(st => !isSubtaskDone(st));
+}
+
+async function addSubtask() {
+  const title = newSubtaskTitle.value.trim();
+  if (!title || !modalTask.value) return;
+  await api.post('/tasks', {
+    column_id: modalTask.value.column_id,
+    parent_task_id: modalTask.value.id,
+    title,
+    position: (modalTask.value.subtasks || []).length,
+  });
+  newSubtaskTitle.value = '';
+  // Refresh modal task to get updated subtasks
+  const fullTask = await api.get(`/tasks/${modalTask.value.id}`);
+  modalTask.value.subtasks = fullTask.subtasks || [];
+  await loadBoard();
+}
+
+async function deleteSubtask(subtask) {
+  await api.del(`/tasks/${subtask.id}`);
+  modalTask.value.subtasks = (modalTask.value.subtasks || []).filter(st => st.id !== subtask.id);
+  await loadBoard();
+}
+
+async function markSubtaskDone(subtask, parentTask) {
+  if (!isSubtaskDone(subtask)) {
+    if (isTimerRunningForTask(subtask.id)) {
+      await stopTimer();
+      await checkRunning();
+    }
+  }
+  await api.patch(`/tasks/${subtask.id}/toggle-complete`);
+  await loadBoard();
+}
+
+async function toggleSubtaskDoneFromModal(subtask) {
+  if (!isSubtaskDone(subtask)) {
+    if (isTimerRunningForTask(subtask.id)) {
+      await stopTimer();
+      await checkRunning();
+    }
+  }
+  const updated = await api.patch(`/tasks/${subtask.id}/toggle-complete`);
+  subtask.completed_at = updated.completed_at;
+  await loadBoard();
+}
+
+function startSubtaskRename(st) {
+  editingSubtaskId.value = st.id;
+  editingSubtaskTitle.value = st.title;
+  nextTick(() => {
+    const el = document.querySelector('.subtask-rename-input');
+    el?.focus();
+    el?.select();
+  });
+}
+
+async function saveSubtaskRename(st) {
+  const title = editingSubtaskTitle.value.trim();
+  editingSubtaskId.value = null;
+  if (!title || title === st.title) return;
+  await api.put(`/tasks/${st.id}`, { ...st, title });
+  st.title = title;
+  await loadBoard();
+}
+
+async function moveSubtask(index, direction) {
+  const subtasks = modalTask.value.subtasks || [];
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= subtasks.length) return;
+  const item = subtasks.splice(index, 1)[0];
+  subtasks.splice(newIndex, 0, item);
+  const ids = subtasks.map(st => st.id);
+  await api.patch(`/tasks/${modalTask.value.id}/reorder-subtasks`, { subtask_ids: ids });
+  await loadBoard();
 }
 
 // Links
@@ -1080,11 +1761,38 @@ async function deleteTask() {
 // Keyboard shortcuts
 function onModalKeydown(event) {
   if (event.key === 'Escape') {
-    closeTaskModal();
+    event.preventDefault();
+    event.stopPropagation();
+    if (editingDescription.value) {
+      exitEditDescription();
+    } else {
+      closeTaskModal();
+    }
+    return;
   }
   if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
     event.preventDefault();
     closeTaskModal();
+    return;
+  }
+  // 1-9 to toggle labels (only when not typing in an input/textarea)
+  if (event.key >= '1' && event.key <= '9' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    const tag = event.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || event.target.isContentEditable) return;
+    event.preventDefault();
+    const index = parseInt(event.key) - 1;
+    toggleLabelByIndex(index);
+  }
+}
+
+function toggleLabelByIndex(index) {
+  if (index < 0 || index >= globalLabels.value.length) return;
+  const gl = globalLabels.value[index];
+  const existing = (modalTask.value?.labels || []).find(l => (l.global_label_id || l.id) === gl.id);
+  if (existing) {
+    removeLabel(existing.id);
+  } else {
+    addLabel(gl);
   }
 }
 
@@ -1115,12 +1823,14 @@ function priorityEmoji(priority) {
   switch (priority) {
     case 'high': return '\uD83D\uDD34';
     case 'medium': return '\uD83D\uDFE1';
-    default: return '\uD83D\uDFE2';
+    case 'low': return '\uD83D\uDFE2';
+    default: return '';
   }
 }
 
 function priorityLabel(priority) {
-  return (priority || 'low').charAt(0).toUpperCase() + (priority || 'low').slice(1) + ' priority';
+  if (!priority || priority === 'none') return 'No priority';
+  return priority.charAt(0).toUpperCase() + priority.slice(1) + ' priority';
 }
 
 function isOverdue(dateStr) {
@@ -1156,13 +1866,36 @@ function entryDuration(entry) {
   return Math.max(0, Math.floor((end - start) / 1000));
 }
 
+function startEditDescription() {
+  editingDescription.value = true;
+  nextTick(() => {
+    descriptionTextarea.value?.focus();
+  });
+}
+
+function exitEditDescription() {
+  editingDescription.value = false;
+  debouncedSave();
+}
+
 function renderMarkdown(text) {
   if (!text) return '';
   let html = text
     // Escape HTML
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+    .replace(/>/g, '&gt;');
+  // Process line by line for headings
+  html = html.split('\n').map(line => {
+    // Headings
+    if (line.match(/^### /)) return '<h3 class="text-base font-semibold text-gray-800 mt-2 mb-1">' + line.slice(4) + '</h3>';
+    if (line.match(/^## /)) return '<h2 class="text-lg font-semibold text-gray-800 mt-3 mb-1">' + line.slice(3) + '</h2>';
+    if (line.match(/^# /)) return '<h1 class="text-xl font-bold text-gray-800 mt-3 mb-1">' + line.slice(2) + '</h1>';
+    // Unordered list
+    if (line.match(/^[-*] /)) return '<li class="ml-4 list-disc text-sm">' + line.slice(2) + '</li>';
+    return line;
+  }).join('\n');
+  html = html
     // Bold
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     // Italic
@@ -1171,9 +1904,65 @@ function renderMarkdown(text) {
     .replace(/`(.+?)`/g, '<code class="bg-gray-100 text-indigo-600 px-1 rounded text-xs">$1</code>')
     // Links
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-indigo-500 hover:underline">$1</a>')
-    // Line breaks
-    .replace(/\n/g, '<br>');
+    // Line breaks (but not after block elements)
+    .replace(/\n(?!<[hlu])/g, '<br>');
   return html;
+}
+
+// ─── Board Drag-to-Scroll ─────────────────────────────────────────
+
+const boardContainer = ref(null);
+let boardDragging = false;
+let boardStartX = 0;
+let boardStartY = 0;
+let boardScrollLeft = 0;
+let boardScrollTop = 0;
+let scrollTarget = null;
+
+function onBoardMouseDown(event) {
+  // Skip interactive elements: buttons, inputs, links, draggable cards
+  const tag = event.target.tagName;
+  if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'A' || tag === 'SELECT') return;
+  if (event.target.closest('.task-card') || event.target.closest('button') || event.target.closest('a')) return;
+
+  // Determine scroll target: tasks-list (vertical) or board-container (horizontal)
+  const tasksList = event.target.closest('.tasks-list');
+  if (tasksList) {
+    scrollTarget = tasksList;
+    boardStartY = event.pageY;
+    boardScrollTop = tasksList.scrollTop;
+    boardStartX = event.pageX;
+    boardScrollLeft = boardContainer.value.scrollLeft;
+  } else {
+    scrollTarget = boardContainer.value;
+    boardStartX = event.pageX;
+    boardScrollLeft = boardContainer.value.scrollLeft;
+    boardStartY = 0;
+  }
+
+  boardDragging = true;
+  document.body.style.cursor = 'grabbing';
+  document.addEventListener('mousemove', onBoardMouseMove);
+  document.addEventListener('mouseup', onBoardMouseUp);
+  event.preventDefault();
+}
+
+function onBoardMouseMove(event) {
+  if (!boardDragging) return;
+  const dx = event.pageX - boardStartX;
+  boardContainer.value.scrollLeft = boardScrollLeft - dx;
+  if (scrollTarget && scrollTarget !== boardContainer.value && boardStartY) {
+    const dy = event.pageY - boardStartY;
+    scrollTarget.scrollTop = boardScrollTop - dy;
+  }
+}
+
+function onBoardMouseUp() {
+  boardDragging = false;
+  scrollTarget = null;
+  document.body.style.cursor = '';
+  document.removeEventListener('mousemove', onBoardMouseMove);
+  document.removeEventListener('mouseup', onBoardMouseUp);
 }
 
 // ─── Click Outside Handling ────────────────────────────────────────
@@ -1185,12 +1974,42 @@ function onClickOutside(event) {
   if (showLabelPicker.value) {
     showLabelPicker.value = false;
   }
+  if (showFilterPanel.value && !event.target.closest('.filter-panel-container')) {
+    showFilterPanel.value = false;
+  }
+}
+
+// ─── Global Keyboard Shortcuts ────────────────────────────────────
+
+function onGlobalKeydown(event) {
+  // Skip if typing in input/textarea or modal is open
+  const tag = event.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || event.target.isContentEditable) return;
+  if (modalTask.value) return;
+
+  if (event.key === '/') {
+    event.preventDefault();
+    toggleFilterPanel();
+  }
+}
+
+function onFilterKeydown(event) {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+    if (filterSearch.value) {
+      filterSearch.value = '';
+    } else {
+      showFilterPanel.value = false;
+    }
+  }
 }
 
 // ─── Lifecycle ─────────────────────────────────────────────────────
 
 onMounted(async () => {
   document.addEventListener('click', onClickOutside, true);
+  document.addEventListener('keydown', onGlobalKeydown);
   await Promise.all([
     loadBoards(),
     loadProjects(),
@@ -1200,6 +2019,156 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('click', onClickOutside, true);
+  document.removeEventListener('keydown', onGlobalKeydown);
+  document.removeEventListener('mousemove', onBoardMouseMove);
+  document.removeEventListener('mouseup', onBoardMouseUp);
   if (saveTimeout) clearTimeout(saveTimeout);
 });
 </script>
+
+<style scoped>
+.tasks-list {
+  padding-top: 4px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.task-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 0.75rem;
+  user-select: none;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.task-card.dragging {
+  display: none !important;
+}
+
+.task-card-done {
+  opacity: 0.6;
+}
+
+.task-done-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border: 2px solid #d1d5db;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  margin-top: 1px;
+}
+
+.task-done-radio:hover:not(:checked) {
+  border-color: #10b981;
+}
+
+.task-done-radio:checked {
+  background: #10b981;
+  border-color: #10b981;
+  box-shadow: inset 0 0 0 3px white;
+}
+
+.task-done-radio:disabled {
+  cursor: default;
+}
+
+.subtask-card {
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 3px solid #a5b4fc;
+}
+
+.subtask-card:hover {
+  background-color: #f0f0ff;
+}
+
+.subtask-card.dragging {
+  display: none !important;
+}
+
+.subtask-done-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+
+.subtask-done-checkbox:hover {
+  border-color: #10b981;
+}
+
+.subtask-done-checkbox:checked {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.subtask-done-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.drop-placeholder {
+  border: 2px dashed #a5b4fc;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  animation: placeholderAppear 0.15s ease-out;
+}
+
+@keyframes placeholderAppear {
+  from {
+    opacity: 0;
+    transform: scaleY(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.column-drag-over {
+  background-color: #e0f2fe !important;
+  border-radius: 0.75rem;
+}
+
+.board-container {
+  overflow-x: auto;
+  cursor: grab;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.board-container::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.tasks-list::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+</style>

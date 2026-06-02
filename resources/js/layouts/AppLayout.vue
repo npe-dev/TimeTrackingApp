@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600" :style="backgroundStyle">
+  <div class="h-screen overflow-auto bg-gradient-to-br from-indigo-500 to-purple-600" :style="backgroundStyle">
     <!-- Navigation -->
-    <header class="bg-white/95 backdrop-blur-sm mx-4 mt-4 rounded-2xl shadow-lg px-6 py-4">
+    <header class="bg-white/95 backdrop-blur-sm shadow-lg px-6 py-4">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
           Time Tracking
@@ -30,20 +30,19 @@
     </header>
 
     <!-- Page content -->
-    <main class="p-4">
+    <main class="px-4 pb-4 pt-2">
       <slot />
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { onMounted, computed } from 'vue';
 import { useAuth } from '@/composables/useAuth';
-import axios from 'axios';
+import { useBackground } from '@/composables/useBackground';
 
 const { user, logout } = useAuth();
-
-const backgroundUrl = ref(null);
+const { backgroundUrl, loadBackground } = useBackground();
 
 const navLinks = [
   { to: '/', label: 'Timer' },
@@ -63,14 +62,5 @@ const backgroundStyle = computed(() => {
   };
 });
 
-onMounted(async () => {
-  try {
-    const { data } = await axios.get('/settings/background/status');
-    if (data.exists) {
-      backgroundUrl.value = data.url;
-    }
-  } catch {
-    // ignore
-  }
-});
+onMounted(() => loadBackground());
 </script>

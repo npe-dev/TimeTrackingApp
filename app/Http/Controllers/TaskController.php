@@ -11,35 +11,45 @@ class TaskController extends Controller
 {
     public function index($columnId)
     {
-        $tasks = Task::with('labels.globalLabel')
+        $tasks = Task::with(['labels.globalLabel', 'checklistItems', 'subtasks.labels.globalLabel', 'subtasks.checklistItems', 'subtasks.project'])
             ->where('column_id', $columnId)
+            ->whereNull('parent_task_id')
             ->orderBy('position')
             ->get();
 
         return $tasks->map(function ($task) {
-            $labels = $task->labels->map(function ($tl) {
-                return [
-                    'id' => $tl->id,
-                    'task_id' => $tl->task_id,
-                    'label' => $tl->globalLabel ? $tl->globalLabel->name : $tl->label,
-                    'color' => $tl->globalLabel ? $tl->globalLabel->color : $tl->color,
-                    'global_label_id' => $tl->global_label_id,
-                    'created_at' => $tl->created_at,
-                ];
-            });
-            $arr = $task->toArray();
-            $arr['labels'] = $labels;
-            unset($arr['labels_relation']);
-            $task->loadMissing('project');
-            $arr['project_name'] = $task->project?->name;
-            $arr['project_color'] = $task->project?->color;
+            $arr = $this->formatTaskForList($task);
+            $arr['subtasks'] = $task->subtasks->map(fn ($st) => $this->formatTaskForList($st))->values();
             return $arr;
         });
     }
 
+    private function formatTaskForList(Task $task): array
+    {
+        $labels = $task->labels->map(function ($tl) {
+            return [
+                'id' => $tl->id,
+                'task_id' => $tl->task_id,
+                'label' => $tl->globalLabel ? $tl->globalLabel->name : $tl->label,
+                'color' => $tl->globalLabel ? $tl->globalLabel->color : $tl->color,
+                'global_label_id' => $tl->global_label_id,
+                'created_at' => $tl->created_at,
+            ];
+        });
+        $arr = $task->toArray();
+        $arr['labels'] = $labels;
+        unset($arr['labels_relation'], $arr['subtasks']);
+        $task->loadMissing('project');
+        $arr['project_name'] = $task->project?->name;
+        $arr['project_color'] = $task->project?->color;
+        $arr['checklist_total'] = $task->checklistItems->count();
+        $arr['checklist_done'] = $task->checklistItems->where('completed', true)->count();
+        return $arr;
+    }
+
     public function show(Task $task)
     {
-        $task->load(['labels.globalLabel', 'checklistItems', 'links', 'project']);
+        $task->load(['labels.globalLabel', 'checklistItems', 'links', 'project', 'subtasks']);
 
         $labels = $task->labels->map(fn($tl) => [
             'id' => $tl->id,
@@ -64,10 +74,11 @@ class TaskController extends Controller
         $task = Task::create([
             'column_id' => $request->column_id,
             'project_id' => $request->project_id,
+            'parent_task_id' => $request->parent_task_id,
             'title' => $request->title,
             'description' => $request->description ?? '',
             'due_date' => $request->due_date,
-            'priority' => $request->priority ?? 'medium',
+            'priority' => $request->priority ?? 'none',
             'position' => $request->position ?? 0,
         ]);
 
@@ -153,6 +164,11 @@ class TaskController extends Controller
             }
 
             $task->update(['column_id' => $newColumnId, 'position' => $newPosition]);
+
+            // Move subtasks to the same column
+            if ($oldColumnId !== $newColumnId) {
+                Task::where('parent_task_id', $task->id)->update(['column_id' => $newColumnId]);
+            }
         });
 
         if ($oldColumnId !== $newColumnId) {
@@ -180,6 +196,23 @@ class TaskController extends Controller
             }
         });
         return response()->json(['success' => true, 'message' => 'Positions normalized']);
+    }
+
+    public function toggleComplete(Task $task)
+    {
+        $task->update([
+            'completed_at' => $task->completed_at ? null : now(),
+        ]);
+        return $task->fresh();
+    }
+
+    public function reorderSubtasks(Request $request, Task $task)
+    {
+        $ids = $request->input('subtask_ids', []);
+        foreach ($ids as $position => $id) {
+            Task::where('id', $id)->where('parent_task_id', $task->id)->update(['position' => $position]);
+        }
+        return response()->json(['success' => true]);
     }
 
     public function destroy(Task $task)

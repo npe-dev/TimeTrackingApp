@@ -12,36 +12,52 @@ class AutomationController extends Controller
         if ($request->board_id) {
             $query->where('board_id', $request->board_id);
         }
-        return $query->orderByDesc('created_at')->get();
+        return $query->orderByDesc('created_at')->get()->map(fn ($a) => $this->formatAutomation($a));
     }
 
     public function show(Automation $automation)
     {
-        return $automation;
+        return $this->formatAutomation($automation);
     }
 
     public function store(Request $request)
     {
-        return Automation::create([
-            'name' => $request->name,
+        $trigger = $request->input('trigger', []);
+
+        $automation = Automation::create([
+            'name' => $request->name ?? '',
             'board_id' => $request->board_id,
-            'trigger_type' => $request->trigger_type,
-            'trigger_config' => $request->trigger_config,
+            'trigger_type' => $trigger['type'] ?? $request->trigger_type,
+            'trigger_config' => collect($trigger)->except('type')->all() ?: $request->trigger_config,
             'actions' => $request->actions,
         ]);
+
+        return $this->formatAutomation($automation);
     }
 
     public function update(Request $request, Automation $automation)
     {
+        $trigger = $request->input('trigger', []);
+
         $automation->update([
-            'name' => $request->name,
+            'name' => $request->name ?? '',
             'board_id' => $request->board_id,
-            'trigger_type' => $request->trigger_type,
-            'trigger_config' => $request->trigger_config,
+            'trigger_type' => $trigger['type'] ?? $request->trigger_type ?? $automation->trigger_type,
+            'trigger_config' => collect($trigger)->except('type')->all() ?: $request->trigger_config ?? $automation->trigger_config,
             'actions' => $request->actions,
-            'enabled' => (bool) $request->enabled,
         ]);
-        return $automation;
+
+        return $this->formatAutomation($automation);
+    }
+
+    private function formatAutomation(Automation $automation): array
+    {
+        $data = $automation->toArray();
+        $data['trigger'] = array_merge(
+            ['type' => $automation->trigger_type],
+            $automation->trigger_config ?? []
+        );
+        return $data;
     }
 
     public function destroy(Automation $automation)

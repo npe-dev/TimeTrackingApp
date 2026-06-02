@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Task extends Model
 {
-    protected $fillable = ['column_id', 'project_id', 'title', 'description', 'due_date', 'priority', 'position'];
+    protected $fillable = ['column_id', 'project_id', 'parent_task_id', 'title', 'description', 'due_date', 'priority', 'position', 'completed_at'];
 
     protected $casts = [
         'due_date' => 'date',
+        'completed_at' => 'datetime',
     ];
 
     public function column()
@@ -40,5 +41,15 @@ class Task extends Model
     public function timeEntries()
     {
         return $this->hasMany(TimeEntry::class);
+    }
+
+    public function parentTask()
+    {
+        return $this->belongsTo(Task::class, 'parent_task_id');
+    }
+
+    public function subtasks()
+    {
+        return $this->hasMany(Task::class, 'parent_task_id')->orderBy('position');
     }
 }

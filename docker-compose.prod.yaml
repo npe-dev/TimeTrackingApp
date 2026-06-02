@@ -1,0 +1,22 @@
+services:
+  timetracking_app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: timetracking_app
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    working_dir: /var/www/html
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./database:/var/www/html/database
+      - ./.env:/var/www/html/.env:ro
+    networks:
+      - nginx_default
+    expose:
+      - 80
+
+networks:
+  nginx_default:
+    external: true

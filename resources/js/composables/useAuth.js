@@ -21,14 +21,14 @@ export function useAuth() {
         await axios.get('/sanctum/csrf-cookie', { baseURL: '/' });
         await axios.post('/login', credentials);
         await fetchUser();
-        router.push({ name: 'dashboard' });
+        router.push({ name: 'timer' });
     }
 
     async function register(form) {
         await axios.get('/sanctum/csrf-cookie', { baseURL: '/' });
         await axios.post('/register', form);
         await fetchUser();
-        router.push({ name: 'dashboard' });
+        router.push({ name: 'timer' });
     }
 
     async function logout() {

@@ -1,0 +1,68 @@
+name: Deploy App on production
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        env:
+          APP_KEY: ${{ secrets.APP_KEY }}
+          APP_URL: ${{ vars.APP_URL }}
+          SESSION_DOMAIN: ${{ vars.SESSION_DOMAIN }}
+          SANCTUM_STATEFUL_DOMAINS: ${{ vars.SANCTUM_STATEFUL_DOMAINS }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: APP_KEY,APP_URL,SESSION_DOMAIN,SANCTUM_STATEFUL_DOMAINS
+          script: |
+            set -e
+
+            echo "→ Navigating to app directory"
+            cd /srv/Projects/TimeTrackingApp
+
+            echo "→ Fixing file permissions before pull"
+            sudo chown -R $USER:$USER .
+
+            echo "→ Pulling latest code"
+            git fetch --all
+            git reset --hard origin/master
+
+            echo "→ Creating .env file from template"
+            cp .env.example .env
+
+            echo "→ Populating .env with production values"
+            sed -i "s|APP_ENV=local|APP_ENV=production|g" .env
+            sed -i "s|APP_DEBUG=true|APP_DEBUG=false|g" .env
+            sed -i "s|APP_KEY=|APP_KEY=${APP_KEY}|g" .env
+            sed -i "s|APP_URL=http://localhost:8077|APP_URL=${APP_URL}|g" .env
+            sed -i "s|LOG_LEVEL=debug|LOG_LEVEL=error|g" .env
+            sed -i "s|SESSION_DOMAIN=null|SESSION_DOMAIN=${SESSION_DOMAIN}|g" .env
+            sed -i "s|SANCTUM_STATEFUL_DOMAINS=|SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS}|g" .env
+
+            echo "→ Verifying .env was created"
+            if [ ! -f .env ]; then
+              echo "❌ ERROR: .env file was not created"
+              exit 1
+            fi
+
+            echo "→ Building Docker containers"
+            docker compose -f docker-compose.prod.yaml down
+            docker compose -f docker-compose.prod.yaml up -d --build
+
+            echo "→ Running migrations"
+            docker exec -i timetracking_app php artisan migrate --force
+
+            docker image prune -f
+
+            echo "✅ Deployment complete"

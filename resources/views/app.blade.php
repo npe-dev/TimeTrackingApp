@@ -6,7 +6,7 @@
     <title>{{ config('app.name', 'Time Tracking') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="antialiased">
+<body class="antialiased bg-indigo-600">
     <div id="app"></div>
 </body>
 </html>

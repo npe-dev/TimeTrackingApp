@@ -161,11 +161,11 @@ import { ref, onMounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useApi } from '@/composables/useApi';
+import { useBackground } from '@/composables/useBackground';
 
 const { fetchUser } = useAuth();
 const { get, post, put, del, patch } = useApi();
-
-const backgroundUrl = ref(null);
+const { backgroundUrl, setBackground } = useBackground();
 const labels = ref([]);
 const showLabelModal = ref(false);
 const editingLabel = ref(null);
@@ -176,15 +176,6 @@ const colorOptions = [
   '#22C55E', '#14B8A6', '#3B82F6',
   '#6366F1', '#8B5CF6', '#EC4899',
 ];
-
-async function loadBackgroundStatus() {
-  try {
-    const data = await get('/settings/background/status');
-    backgroundUrl.value = data.url || null;
-  } catch {
-    backgroundUrl.value = null;
-  }
-}
 
 async function uploadBackground(event) {
   const file = event.target.files?.[0];
@@ -197,7 +188,7 @@ async function uploadBackground(event) {
   formData.append('background', file);
   try {
     const data = await post('/settings/background', formData);
-    backgroundUrl.value = data.url || null;
+    setBackground(data.url || null);
   } catch (e) {
     console.error('Failed to upload background', e);
   }
@@ -207,7 +198,7 @@ async function uploadBackground(event) {
 async function removeBackground() {
   try {
     await del('/settings/background');
-    backgroundUrl.value = null;
+    setBackground(null);
   } catch (e) {
     console.error('Failed to remove background', e);
   }
@@ -280,7 +271,6 @@ async function reorderLabel(index, direction) {
 
 onMounted(async () => {
   await fetchUser();
-  loadBackgroundStatus();
   loadLabels();
 });
 </script>
