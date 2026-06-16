@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('global_labels', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->foreignId('board_id')->constrained()->cascadeOnDelete();
+            $table->string('name');
             $table->string('color')->default('#6B7280');
             $table->integer('sort_order')->default(0);
             $table->timestamps();
+            $table->unique(['board_id', 'name']);
         });
     }
 

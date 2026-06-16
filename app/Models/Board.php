@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\GlobalLabel;
 
 class Board extends Model
 {
@@ -16,5 +17,10 @@ class Board extends Model
     public function automations()
     {
         return $this->hasMany(Automation::class);
+    }
+
+    public function labels()
+    {
+        return $this->hasMany(GlobalLabel::class)->orderBy('sort_order')->orderBy('id');
     }
 }

@@ -26,6 +26,13 @@
           >
             Edit
           </button>
+          <button
+            v-if="board"
+            @click="showLabelsModal = true"
+            class="px-3 py-2 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Labels
+          </button>
         </div>
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-1 relative filter-panel-container">
@@ -188,6 +195,29 @@
               placeholder="Description (optional)"
               class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none mb-4"
             />
+            <!-- Board Background -->
+            <div class="mb-4">
+              <p class="text-xs font-medium text-gray-500 mb-2">Background Image</p>
+              <div class="flex items-center gap-3">
+                <div class="w-24 h-14 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
+                  <img v-if="boardBackgroundUrl" :src="boardBackgroundUrl" class="w-full h-full object-cover" alt="Background" />
+                  <span v-else class="text-[10px] text-gray-400">None</span>
+                </div>
+                <div class="space-y-1.5">
+                  <label class="inline-block px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg cursor-pointer hover:shadow-md transition-all">
+                    Upload
+                    <input type="file" accept="image/*" class="hidden" @change="uploadBoardBackground" />
+                  </label>
+                  <button
+                    v-if="boardBackgroundUrl"
+                    @click="removeBoardBackground"
+                    class="block px-3 py-1.5 text-xs font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-all"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </div>
             <div class="flex items-center gap-2">
               <button
                 v-if="boards.length > 1"
@@ -244,11 +274,23 @@
         <div
           v-for="column in filteredColumns"
           :key="column.id"
-          class="flex-shrink-0 w-80"
+          class="flex-shrink-0 w-80 column-wrapper"
+          :class="{
+            'column-being-dragged': draggedColumn?.id === column.id,
+            'column-drop-before': columnDropTarget?.columnId === column.id && columnDropTarget?.before,
+            'column-drop-after': columnDropTarget?.columnId === column.id && !columnDropTarget?.before,
+          }"
+          @dragover="onColumnDragOver($event, column)"
+          @drop="onColumnDrop($event, column)"
         >
           <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg flex flex-col max-h-[80vh]">
             <!-- Column Header -->
-            <div class="px-4 py-3 flex items-center justify-between border-b border-gray-100">
+            <div
+              class="column-header px-4 py-3 flex items-center justify-between border-b border-gray-100 cursor-grab active:cursor-grabbing"
+              :draggable="true"
+              @dragstart="onColumnDragStart($event, column)"
+              @dragend="onColumnDragEnd"
+            >
               <div class="flex items-center gap-2">
                 <h3 class="font-semibold text-gray-700 text-sm">{{ column.name }}</h3>
                 <span class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
@@ -320,7 +362,7 @@
                   @dragstart="onDragStart($event, task, column.id)"
                   @dragend="onDragEnd"
                   class="task-card bg-white rounded-lg border border-gray-200 shadow-sm p-3 cursor-move group"
-                  :class="{ 'task-card-done': isDoneColumn(column.id) }"
+                  :class="{ 'task-card-done': isTaskDone(task) }"
                   @click="openTaskModal(task)"
                 >
                   <!-- Card Top Row -->
@@ -328,14 +370,13 @@
                     :style="task.labels && task.labels.length ? { backgroundColor: task.labels[0].color + '18' } : {}"
                   >
                     <input
-                      type="radio"
-                      class="task-done-radio"
-                      :checked="isDoneColumn(column.id)"
-                      :disabled="isDoneColumn(column.id)"
+                      type="checkbox"
+                      class="task-done-checkbox"
+                      :checked="isTaskDone(task)"
                       @click.stop.prevent="markTaskDone(task)"
                     />
                     <h4 class="text-sm font-medium flex-1 leading-snug"
-                      :class="isDoneColumn(column.id) ? 'line-through text-gray-400' : 'text-gray-800'"
+                      :class="isTaskDone(task) ? 'line-through text-gray-400' : 'text-gray-800'"
                     >{{ task.title }}</h4>
                     <span v-if="priorityEmoji(task.priority)" class="text-sm flex-shrink-0" :title="priorityLabel(task.priority)">
                       {{ priorityEmoji(task.priority) }}
@@ -921,6 +962,101 @@
       </Teleport>
 
     </div>
+
+    <!-- Labels Management Modal -->
+    <Teleport to="body">
+      <div v-if="showLabelsModal" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="showLabelsModal = false"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">Board Labels</h3>
+            <button
+              @click="openBoardLabelModal()"
+              class="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all"
+            >
+              + Add Label
+            </button>
+          </div>
+          <div class="overflow-y-auto flex-1">
+            <div v-if="globalLabels.length" class="space-y-2">
+              <div
+                v-for="(label, index) in globalLabels"
+                :key="label.id"
+                class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+              >
+                <span class="text-xs text-gray-400 font-mono w-5 shrink-0">{{ index + 1 }}</span>
+                <span class="w-4 h-4 rounded-full shrink-0" :style="{ backgroundColor: label.color }"></span>
+                <span class="text-sm font-medium text-gray-700 flex-1">{{ label.name }}</span>
+                <div class="flex items-center gap-1">
+                  <button @click="reorderBoardLabel(index, -1)" :disabled="index === 0" class="p-1 text-gray-400 hover:text-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                  </button>
+                  <button @click="reorderBoardLabel(index, 1)" :disabled="index === globalLabels.length - 1" class="p-1 text-gray-400 hover:text-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                  </button>
+                  <button @click="openBoardLabelModal(label)" class="p-1 text-gray-400 hover:text-indigo-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                  </button>
+                  <button @click="deleteBoardLabel(label)" class="p-1 text-gray-400 hover:text-red-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p v-else class="text-sm text-gray-400">No labels yet. Add one to get started.</p>
+          </div>
+          <div class="flex justify-end mt-4 pt-4 border-t border-gray-100">
+            <button @click="showLabelsModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Label Edit Modal (board labels) -->
+    <Teleport to="body">
+      <div v-if="showLabelEditModal" class="fixed inset-0 z-[60] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showLabelEditModal = false"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+          <h3 class="text-lg font-bold text-gray-800 mb-4">{{ editingBoardLabel ? 'Edit Label' : 'New Label' }}</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-600 mb-1">Name</label>
+              <input
+                v-model="boardLabelForm.name"
+                type="text"
+                placeholder="Label name"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                @keydown.enter="saveBoardLabel"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-600 mb-2">Color</label>
+              <div class="grid grid-cols-9 gap-2">
+                <button
+                  v-for="color in labelColorOptions"
+                  :key="color"
+                  @click="boardLabelForm.color = color"
+                  class="w-8 h-8 rounded-lg transition-all"
+                  :class="boardLabelForm.color === color ? 'ring-2 ring-offset-2 ring-indigo-400 scale-110' : 'hover:scale-105'"
+                  :style="{ backgroundColor: color }"
+                ></button>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 mt-6">
+            <button @click="showLabelEditModal = false" class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+            <button
+              @click="saveBoardLabel"
+              :disabled="!boardLabelForm.name.trim()"
+              class="px-4 py-2 text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ editingBoardLabel ? 'Update' : 'Create' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </AppLayout>
 </template>
 
@@ -931,11 +1067,13 @@ import { useAuth } from '@/composables/useAuth';
 import { useApi } from '@/composables/useApi';
 import { useProjects } from '@/composables/useProjects';
 import { useTimer } from '@/composables/useTimer';
+import { useBackground } from '@/composables/useBackground';
 
 const { user } = useAuth();
 const api = useApi();
 const { projects, loadProjects } = useProjects();
 const { runningEntry, checkRunning, start: startTimer, stop: stopTimer } = useTimer();
+const { loadBoardBackground, setBackground, clearBoardCache } = useBackground();
 
 // ─── Board State ───────────────────────────────────────────────────
 
@@ -960,6 +1098,116 @@ const showEditBoardModal = ref(false);
 const editBoardName = ref('');
 const editBoardDescription = ref('');
 const showDeleteBoardConfirm = ref(false);
+
+// ─── Board Labels Management ───────────────────────────────────────
+const showLabelsModal = ref(false);
+const showLabelEditModal = ref(false);
+const editingBoardLabel = ref(null);
+const boardLabelForm = ref({ name: '', color: '#6366F1' });
+const labelColorOptions = [
+  '#EF4444', '#F97316', '#EAB308',
+  '#22C55E', '#14B8A6', '#3B82F6',
+  '#6366F1', '#8B5CF6', '#EC4899',
+];
+
+function openBoardLabelModal(label = null) {
+  editingBoardLabel.value = label;
+  boardLabelForm.value = label
+    ? { name: label.name, color: label.color }
+    : { name: '', color: '#6366F1' };
+  showLabelEditModal.value = true;
+}
+
+async function saveBoardLabel() {
+  const name = boardLabelForm.value.name.trim();
+  if (!name || !selectedBoardId.value) return;
+  try {
+    if (editingBoardLabel.value) {
+      await api.put(`/boards/${selectedBoardId.value}/labels/${editingBoardLabel.value.id}`, {
+        name,
+        color: boardLabelForm.value.color,
+      });
+    } else {
+      await api.post(`/boards/${selectedBoardId.value}/labels`, {
+        name,
+        color: boardLabelForm.value.color,
+      });
+    }
+    showLabelEditModal.value = false;
+    globalLabels.value = await api.get(`/boards/${selectedBoardId.value}/labels`);
+  } catch (e) {
+    console.error('Failed to save label', e);
+  }
+}
+
+async function deleteBoardLabel(label) {
+  if (!confirm(`Delete label "${label.name}"?`)) return;
+  try {
+    await api.del(`/boards/${selectedBoardId.value}/labels/${label.id}`);
+    globalLabels.value = await api.get(`/boards/${selectedBoardId.value}/labels`);
+  } catch (e) {
+    console.error('Failed to delete label', e);
+  }
+}
+
+async function reorderBoardLabel(index, direction) {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= globalLabels.value.length) return;
+  const reordered = [...globalLabels.value];
+  const [moved] = reordered.splice(index, 1);
+  reordered.splice(newIndex, 0, moved);
+  globalLabels.value = reordered;
+  try {
+    await api.patch(`/boards/${selectedBoardId.value}/labels/reorder`, {
+      labelIds: reordered.map(l => l.id),
+    });
+  } catch (e) {
+    console.error('Failed to reorder labels', e);
+    globalLabels.value = await api.get(`/boards/${selectedBoardId.value}/labels`);
+  }
+}
+
+// ─── Board Background ──────────────────────────────────────────────
+const boardBackgroundUrl = ref(null);
+
+async function loadEditBoardBackground() {
+  if (!selectedBoardId.value) return;
+  try {
+    const data = await api.get(`/boards/${selectedBoardId.value}/background/status`);
+    boardBackgroundUrl.value = data.exists ? data.url : null;
+  } catch {
+    boardBackgroundUrl.value = null;
+  }
+}
+
+async function uploadBoardBackground(event) {
+  const file = event.target.files?.[0];
+  if (!file || !selectedBoardId.value) return;
+  if (file.size > 10 * 1024 * 1024) { alert('File size must be under 10MB.'); return; }
+  const formData = new FormData();
+  formData.append('background', file);
+  try {
+    const data = await api.post(`/boards/${selectedBoardId.value}/background`, formData);
+    boardBackgroundUrl.value = data.url || null;
+    clearBoardCache(selectedBoardId.value);
+    setBackground(data.url || null);
+  } catch (e) {
+    console.error('Failed to upload background', e);
+  }
+  event.target.value = '';
+}
+
+async function removeBoardBackground() {
+  if (!selectedBoardId.value) return;
+  try {
+    await api.del(`/boards/${selectedBoardId.value}/background`);
+    boardBackgroundUrl.value = null;
+    clearBoardCache(selectedBoardId.value);
+    setBackground(null);
+  } catch (e) {
+    console.error('Failed to remove background', e);
+  }
+}
 
 // ─── Filters ──────────────────────────────────────────────────────
 const showFilterPanel = ref(false);
@@ -1103,6 +1351,8 @@ async function createBoard() {
 function openEditBoardModal() {
   editBoardName.value = board.value.name;
   editBoardDescription.value = board.value.description || '';
+  boardBackgroundUrl.value = null;
+  loadEditBoardBackground();
   showEditBoardModal.value = true;
 }
 
@@ -1133,7 +1383,6 @@ async function deleteBoard() {
 async function loadBoard() {
   if (!selectedBoardId.value) return;
   board.value = await api.get(`/boards/${selectedBoardId.value}`);
-  // Load tasks for each column
   if (board.value?.columns) {
     await Promise.all(
       board.value.columns.map(async (col) => {
@@ -1141,12 +1390,12 @@ async function loadBoard() {
       })
     );
   }
-  // Load global labels for filters
   try {
-    globalLabels.value = await api.get('/global-labels');
+    globalLabels.value = await api.get(`/boards/${selectedBoardId.value}/labels`);
   } catch {
     globalLabels.value = [];
   }
+  loadBoardBackground(selectedBoardId.value);
 }
 
 // ─── Column Management ─────────────────────────────────────────────
@@ -1207,6 +1456,59 @@ async function doDeleteColumn() {
   await api.del(`/columns/${deletingColumn.value.id}`);
   deletingColumn.value = null;
   await loadBoard();
+}
+
+// ─── Column Reordering (drag header left/right) ────────────────────
+
+const draggedColumn = ref(null);
+const columnDropTarget = ref(null); // { columnId, before }
+
+function onColumnDragStart(event, column) {
+  draggedColumn.value = column;
+  columnDropTarget.value = null;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', `column:${column.id}`);
+}
+
+function onColumnDragOver(event, column) {
+  if (!draggedColumn.value) return; // ignore task drags
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  if (column.id === draggedColumn.value.id) {
+    columnDropTarget.value = null;
+    return;
+  }
+  const rect = event.currentTarget.getBoundingClientRect();
+  const before = event.clientX < rect.left + rect.width / 2;
+  columnDropTarget.value = { columnId: column.id, before };
+}
+
+function onColumnDragEnd() {
+  draggedColumn.value = null;
+  columnDropTarget.value = null;
+}
+
+async function onColumnDrop(event, column) {
+  if (!draggedColumn.value) return; // ignore task drags
+  event.preventDefault();
+  const dragged = draggedColumn.value;
+  const target = columnDropTarget.value;
+  draggedColumn.value = null;
+  columnDropTarget.value = null;
+  if (!target || target.columnId === dragged.id) return;
+
+  // Build the new ordering from the full (unfiltered) column list
+  const ordered = columns.value.filter(c => c.id !== dragged.id);
+  const targetIdx = ordered.findIndex(c => c.id === target.columnId);
+  if (targetIdx === -1) return;
+  ordered.splice(target.before ? targetIdx : targetIdx + 1, 0, dragged);
+
+  const ids = ordered.map(c => c.id);
+  // Optimistic reorder so the board updates immediately
+  if (board.value?.columns) {
+    board.value.columns = ids.map(id => board.value.columns.find(c => c.id === id));
+  }
+  await api.patch(`/boards/${selectedBoardId.value}/columns/reorder`, { columnIds: ids });
 }
 
 // ─── Column Sorting ────────────────────────────────────────────────
@@ -1283,24 +1585,18 @@ async function createTask(columnId) {
   await loadBoard();
 }
 
-function isDoneColumn(columnId) {
-  const lastCol = columns.value[columns.value.length - 1];
-  return lastCol && lastCol.id === columnId;
+function isTaskDone(task) {
+  return !!task.completed_at;
 }
 
 async function markTaskDone(task) {
-  // Stop timer if running on this task
-  if (isTimerRunningForTask(task.id)) {
+  // Stop timer if running on this task (only when marking done, not when un-checking)
+  if (!isTaskDone(task) && isTimerRunningForTask(task.id)) {
     await stopTimer();
   }
-  // Move to last column (assumed to be "Done")
-  const lastColumn = columns.value[columns.value.length - 1];
-  if (!lastColumn) return;
-  await api.patch(`/tasks/${task.id}/move`, {
-    column_id: lastColumn.id,
-    position: (lastColumn.tasks || []).length,
-  });
-  await loadBoard();
+  // Toggle completion in place — the card stays where it is
+  const updated = await api.patch(`/tasks/${task.id}/toggle-complete`);
+  task.completed_at = updated.completed_at;
 }
 
 // ─── Drag & Drop ───────────────────────────────────────────────────
@@ -1545,11 +1841,13 @@ async function openTaskModal(task) {
     modalTaskTimeEntries.value = [];
   }
 
-  // Load global labels
-  try {
-    globalLabels.value = await api.get('/global-labels');
-  } catch {
-    globalLabels.value = [];
+  // Labels are already loaded from loadBoard; refresh in case they changed
+  if (selectedBoardId.value && !globalLabels.value.length) {
+    try {
+      globalLabels.value = await api.get(`/boards/${selectedBoardId.value}/labels`);
+    } catch {
+      globalLabels.value = [];
+    }
   }
 
   // Focus modal overlay so keyboard shortcuts work
@@ -1924,6 +2222,8 @@ function onBoardMouseDown(event) {
   const tag = event.target.tagName;
   if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'A' || tag === 'SELECT') return;
   if (event.target.closest('.task-card') || event.target.closest('button') || event.target.closest('a')) return;
+  // Column headers are drag handles for reordering — don't start a board pan there
+  if (event.target.closest('.column-header')) return;
 
   // Determine scroll target: tasks-list (vertical) or board-container (horizontal)
   const tasksList = event.target.closest('.tasks-list');
@@ -2049,35 +2349,44 @@ onUnmounted(() => {
 }
 
 .task-card-done {
-  opacity: 0.6;
+  background-color: #f3f4f6;
+  opacity: 0.7;
 }
 
-.task-done-radio {
+.task-done-checkbox {
   appearance: none;
   -webkit-appearance: none;
   width: 18px;
   height: 18px;
   min-width: 18px;
   border: 2px solid #d1d5db;
-  border-radius: 50%;
+  border-radius: 5px;
   background: white;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, background 0.2s;
   margin-top: 1px;
+  position: relative;
 }
 
-.task-done-radio:hover:not(:checked) {
+.task-done-checkbox:hover:not(:checked) {
   border-color: #10b981;
 }
 
-.task-done-radio:checked {
+.task-done-checkbox:checked {
   background: #10b981;
   border-color: #10b981;
-  box-shadow: inset 0 0 0 3px white;
 }
 
-.task-done-radio:disabled {
-  cursor: default;
+.task-done-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .subtask-card {
@@ -2155,6 +2464,36 @@ onUnmounted(() => {
 .column-drag-over {
   background-color: #e0f2fe !important;
   border-radius: 0.75rem;
+}
+
+/* Column reordering */
+.column-wrapper {
+  position: relative;
+  transition: opacity 0.15s ease;
+}
+
+.column-being-dragged {
+  opacity: 0.4;
+}
+
+.column-drop-before::before,
+.column-drop-after::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 4px;
+  background: #6366f1;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
+}
+
+.column-drop-before::before {
+  left: -10px;
+}
+
+.column-drop-after::after {
+  right: -10px;
 }
 
 .board-container {

@@ -37,12 +37,12 @@
 </template>
 
 <script setup>
-import { onMounted, computed } from 'vue';
+import { computed } from 'vue';
 import { useAuth } from '@/composables/useAuth';
 import { useBackground } from '@/composables/useBackground';
 
 const { user, logout } = useAuth();
-const { backgroundUrl, loadBackground } = useBackground();
+const { backgroundUrl } = useBackground();
 
 const navLinks = [
   { to: '/', label: 'Timer' },
@@ -62,5 +62,5 @@ const backgroundStyle = computed(() => {
   };
 });
 
-onMounted(() => loadBackground());
+
 </script>

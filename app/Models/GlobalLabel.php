@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class GlobalLabel extends Model
 {
-    protected $fillable = ['name', 'color', 'sort_order'];
+    protected $fillable = ['board_id', 'name', 'color', 'sort_order'];
 
     public function taskLabels()
     {

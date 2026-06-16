@@ -19,8 +19,8 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Background status (public - needed before login for page styling)
-Route::get('/settings/background/status', [SettingsController::class, 'backgroundStatus']);
+// Background status is now per-board (protected), this stub keeps old clients happy
+Route::get('/settings/background/status', fn() => response()->json(['exists' => false]));
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -35,7 +35,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('boards', BoardController::class);
     Route::get('/boards/{boardId}/columns', [ColumnController::class, 'index']);
 
+    // Per-board labels
+    Route::get('/boards/{board}/labels', [GlobalLabelController::class, 'index']);
+    Route::post('/boards/{board}/labels', [GlobalLabelController::class, 'store']);
+    Route::put('/boards/{board}/labels/{globalLabel}', [GlobalLabelController::class, 'update']);
+    Route::delete('/boards/{board}/labels/{globalLabel}', [GlobalLabelController::class, 'destroy']);
+    Route::patch('/boards/{board}/labels/reorder', [GlobalLabelController::class, 'reorder']);
+
+    // Per-board background
+    Route::get('/boards/{board}/background/status', [BoardController::class, 'backgroundStatus']);
+    Route::post('/boards/{board}/background', [BoardController::class, 'uploadBackground']);
+    Route::delete('/boards/{board}/background', [BoardController::class, 'deleteBackground']);
+
     // Columns
+    Route::patch('/boards/{board}/columns/reorder', [ColumnController::class, 'reorder']);
     Route::post('/columns', [ColumnController::class, 'store']);
     Route::put('/columns/{column}', [ColumnController::class, 'update']);
     Route::delete('/columns/{column}', [ColumnController::class, 'destroy']);
@@ -54,13 +67,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Task labels
     Route::post('/tasks/{taskId}/labels', [TaskLabelController::class, 'store']);
     Route::delete('/labels/{label}', [TaskLabelController::class, 'destroy']);
-
-    // Global labels
-    Route::get('/global-labels', [GlobalLabelController::class, 'index']);
-    Route::post('/global-labels', [GlobalLabelController::class, 'store']);
-    Route::put('/global-labels/{globalLabel}', [GlobalLabelController::class, 'update']);
-    Route::delete('/global-labels/{globalLabel}', [GlobalLabelController::class, 'destroy']);
-    Route::patch('/global-labels/reorder', [GlobalLabelController::class, 'reorder']);
 
     // Checklist items
     Route::post('/tasks/{taskId}/checklist', [ChecklistItemController::class, 'store']);
@@ -98,7 +104,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/automations/{automation}', [AutomationController::class, 'destroy']);
     Route::patch('/automations/{automation}/toggle', [AutomationController::class, 'toggle']);
 
-    // Settings
-    Route::post('/settings/background', [SettingsController::class, 'uploadBackground']);
-    Route::delete('/settings/background', [SettingsController::class, 'deleteBackground']);
+    // Settings (kept for any future global settings)
+    Route::post('/settings/background', fn() => response()->json(['success' => false, 'message' => 'Use per-board background endpoint']));
+    Route::delete('/settings/background', fn() => response()->json(['success' => false, 'message' => 'Use per-board background endpoint']));
 });
