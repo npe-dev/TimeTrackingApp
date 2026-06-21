@@ -13,6 +13,8 @@ use App\Http\Controllers\TimeEntryController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\TokenController;
+use App\Http\Controllers\McpController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes (public)
@@ -27,6 +29,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+
+    // API tokens (for MCP access) — managed from the browser session only
+    Route::get('/tokens', [TokenController::class, 'index']);
+    Route::post('/tokens', [TokenController::class, 'store']);
+    Route::delete('/tokens/{id}', [TokenController::class, 'destroy']);
+
+    // MCP server (JSON-RPC) — authenticated by a personal access token
+    Route::post('/mcp', [McpController::class, 'handle']);
 
     // Projects
     Route::apiResource('projects', ProjectController::class);

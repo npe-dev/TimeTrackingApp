@@ -64,9 +64,28 @@ class BoardScopingTest extends TestCase
         $this->actingAs($user)
             ->postJson('/api/entries/start', ['project_id' => $project->id])
             ->assertSuccessful()
-            ->assertJsonPath('project_id', $project->id);
+            ->assertJsonPath('project_id', $project->id)
+            // The frontend uses board_id to only show the timer on its own board.
+            ->assertJsonPath('board_id', $board->id);
 
         $this->assertNotNull(TimeEntry::where('user_id', $user->id)->whereNull('end_time')->first());
+    }
+
+    public function test_running_entry_payload_includes_board_id(): void
+    {
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        TimeEntry::create([
+            'user_id' => $user->id,
+            'project_id' => $project->id,
+            'start_time' => now()->subMinutes(5),
+        ]);
+
+        $this->actingAs($user)
+            ->getJson('/api/entries/running')
+            ->assertSuccessful()
+            ->assertJsonPath('board_id', $board->id);
     }
 
     public function test_task_timer_without_project_falls_back_to_board_default(): void

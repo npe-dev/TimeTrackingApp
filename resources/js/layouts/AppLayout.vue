@@ -35,7 +35,13 @@
           </router-link>
         </nav>
         <div class="ml-auto flex items-center gap-2">
-          <span class="text-sm text-gray-500 font-medium">{{ user?.name }}</span>
+          <router-link
+            to="/profile"
+            class="text-sm font-medium transition-colors"
+            :class="$route.path === '/profile' ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'"
+          >
+            {{ user?.name }}
+          </router-link>
           <button
             @click="logout"
             class="text-sm text-gray-400 hover:text-red-500 transition-colors px-2 py-1"

@@ -53,6 +53,12 @@ const routes = [
         component: () => import('./pages/Automations.vue'),
         meta: { auth: true },
     },
+    {
+        path: '/profile',
+        name: 'profile',
+        component: () => import('./pages/Profile.vue'),
+        meta: { auth: true },
+    },
 ];
 
 const router = createRouter({

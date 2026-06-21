@@ -10,7 +10,7 @@
         </div>
 
         <!-- Running Info -->
-        <div v-if="runningEntry" class="mb-4">
+        <div v-if="displayEntry" class="mb-4">
           <span
             class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700"
           >
@@ -19,17 +19,17 @@
               :style="{ backgroundColor: runningProject?.color || '#6366f1' }"
             ></span>
             {{ runningProject?.name || 'No project' }}
-            <span v-if="runningEntry.task_title" class="text-green-600">
-              &mdash; {{ runningEntry.task_title }}
+            <span v-if="displayEntry.task_title" class="text-green-600">
+              &mdash; {{ displayEntry.task_title }}
             </span>
-            <span v-else-if="runningEntry.description" class="text-green-500">
-              &mdash; {{ runningEntry.description }}
+            <span v-else-if="displayEntry.description" class="text-green-500">
+              &mdash; {{ displayEntry.description }}
             </span>
           </span>
         </div>
 
         <!-- Controls (when stopped) -->
-        <div v-if="!runningEntry" class="space-y-4 max-w-md mx-auto">
+        <div v-if="!displayEntry" class="space-y-4 max-w-md mx-auto">
           <select
             v-model="timerForm.project_id"
             class="w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
@@ -48,13 +48,13 @@
 
         <!-- Start / Stop Button -->
         <button
-          @click="runningEntry ? stopTimer() : startTimer()"
+          @click="displayEntry ? stopTimer() : startTimer()"
           class="mt-6 px-10 py-3.5 rounded-xl text-white font-semibold text-lg shadow-lg transition-all duration-200 hover:scale-105 active:scale-95"
-          :class="runningEntry
+          :class="displayEntry
             ? 'bg-gradient-to-r from-red-500 to-rose-600 hover:shadow-red-200'
             : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-green-200'"
         >
-          {{ runningEntry ? 'Stop' : 'Start' }}
+          {{ displayEntry ? 'Stop' : 'Start' }}
         </button>
       </div>
 
@@ -132,6 +132,16 @@
             {{ formatDuration(entryDuration(entry)) }}
           </span>
           <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+            <button
+              @click="restartEntry(entry)"
+              class="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition"
+              title="Start a new timer with this entry's project, task and description"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
             <button
               @click="editEntry(entry)"
               class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition"
@@ -306,6 +316,14 @@ const { runningEntry, checkRunning, start, stop, stopAt, startHeartbeat } = useT
 const { projects, loadProjects, getProjectById } = useProjects();
 const { activeBoardId } = useBoard();
 
+// The single running timer is global, but it should only be *shown* on the board
+// it belongs to. On any other board the Timer page behaves as if nothing is running.
+const displayEntry = computed(() =>
+  runningEntry.value && runningEntry.value.board_id === activeBoardId.value
+    ? runningEntry.value
+    : null
+);
+
 // ─── Timer Display ──────────────────────────────────────────────
 const elapsedSeconds = ref(0);
 let timerInterval = null;
@@ -335,8 +353,8 @@ function stopTimerDisplay() {
 }
 
 function updateElapsed() {
-  if (!runningEntry.value?.start_time) return;
-  const start = new Date(runningEntry.value.start_time).getTime();
+  if (!displayEntry.value?.start_time) return;
+  const start = new Date(displayEntry.value.start_time).getTime();
   elapsedSeconds.value = Math.max(0, Math.floor((Date.now() - start) / 1000));
   // While the idle alert is flashing the title, don't clobber it with the clock.
   if (!idleAlerting) {
@@ -344,18 +362,20 @@ function updateElapsed() {
   }
 }
 
+// The visible clock follows only the active board's timer.
+watch(displayEntry, (val) => {
+  if (val) startTimerDisplay();
+  else stopTimerDisplay();
+}, { immediate: true });
+
+// The heartbeat keeps the actual running timer alive even while another board is shown.
 watch(runningEntry, (val) => {
-  if (val) {
-    startTimerDisplay();
-    startHeartbeat();
-  } else {
-    stopTimerDisplay();
-  }
+  if (val) startHeartbeat();
 });
 
 const runningProject = computed(() => {
-  if (!runningEntry.value?.project_id) return null;
-  return getProjectById(runningEntry.value.project_id);
+  if (!displayEntry.value?.project_id) return null;
+  return getProjectById(displayEntry.value.project_id);
 });
 
 // ─── Timer Controls ─────────────────────────────────────────────
@@ -376,6 +396,18 @@ async function startTimer() {
 
 async function stopTimer() {
   await stop();
+  await loadEntries();
+}
+
+// Start a brand-new timer reusing a past entry's project, task and description.
+// (Any currently running timer is stopped first, as usual.)
+async function restartEntry(entry) {
+  await start({
+    project_id: entry.project_id,
+    task_id: entry.task_id ?? null,
+    description: entry.description ?? '',
+  });
+  resetIdleDetection();
   await loadEntries();
 }
 

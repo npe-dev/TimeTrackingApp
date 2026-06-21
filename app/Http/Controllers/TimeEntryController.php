@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\TimeEntry;
+use App\Services\TimerService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -29,11 +30,7 @@ class TimeEntryController extends Controller
 
     public function running(Request $request)
     {
-        $entry = TimeEntry::with(['project', 'task'])
-            ->where('user_id', $request->user()->id)
-            ->whereNull('end_time')
-            ->orderByDesc('start_time')
-            ->first();
+        $entry = TimerService::running($request->user());
 
         return $entry ? $this->formatEntry($entry) : null;
     }
@@ -46,41 +43,19 @@ class TimeEntryController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        // Every entry must belong to a board via its project. When starting from a
-        // task without an explicit project, fall back to the task's own project or
-        // the task's board default project ("General").
-        $projectId = $request->project_id;
-        if (! $projectId && $request->task_id) {
-            $task = Task::with('column.board')->find($request->task_id);
-            $projectId = $task?->project_id
-                ?? $task?->column?->board?->projects()->orderBy('id')->value('id');
-        }
-        abort_if(! $projectId, 422, 'A project is required to start a timer.');
-
-        $now = Carbon::now();
-
-        // Stop any running timer
-        TimeEntry::where('user_id', $request->user()->id)
-            ->whereNull('end_time')
-            ->update(['end_time' => $now]);
-
-        $entry = TimeEntry::create([
-            'project_id' => $projectId,
-            'task_id' => $request->task_id,
-            'description' => $request->description ?? '',
-            'start_time' => $now,
-            'last_heartbeat' => $now,
-            'user_id' => $request->user()->id,
-        ]);
+        $entry = TimerService::start(
+            $request->user(),
+            $request->project_id,
+            $request->task_id,
+            $request->description ?? '',
+        );
 
         return $this->formatEntry($entry->load(['project', 'task']));
     }
 
     public function stop(Request $request)
     {
-        TimeEntry::where('user_id', $request->user()->id)
-            ->whereNull('end_time')
-            ->update(['end_time' => Carbon::now()]);
+        TimerService::stop($request->user());
 
         return response()->json(['success' => true]);
     }
@@ -257,6 +232,7 @@ class TimeEntryController extends Controller
         $arr['project_name'] = $entry->project?->name;
         $arr['project_color'] = $entry->project?->color;
         $arr['task_title'] = $entry->task?->title;
+        $arr['board_id'] = $entry->project?->board_id;
 
         return $arr;
     }
