@@ -5,7 +5,8 @@ const CACHE_KEY = 'board_bg_';
 
 // Seed synchronously from localStorage so AppLayout renders with the correct
 // background on the very first paint — no async round-trip, no flicker.
-const cachedBoardId = sessionStorage.getItem('selectedBoardId');
+// The active board id is persisted by useBoard under 'activeBoardId'.
+const cachedBoardId = localStorage.getItem('activeBoardId');
 const cachedUrl = cachedBoardId ? localStorage.getItem(CACHE_KEY + cachedBoardId) : null;
 const backgroundUrl = ref(cachedUrl);
 let loadedBoardId = null;

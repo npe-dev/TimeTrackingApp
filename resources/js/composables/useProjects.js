@@ -6,8 +6,8 @@ const projects = ref([]);
 export function useProjects() {
     const api = useApi();
 
-    async function loadProjects() {
-        projects.value = await api.get('/projects');
+    async function loadProjects(boardId = null) {
+        projects.value = await api.get('/projects', boardId ? { board_id: boardId } : {});
     }
 
     async function createProject(data) {

@@ -1,7 +1,7 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\TimeEntry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -12,17 +12,13 @@ class ReportController extends Controller
         $userId = $request->user()->id;
         $startDate = $request->start_date;
         $endDate = $request->end_date;
-
-        $query = TimeEntry::where('user_id', $userId);
-        if ($startDate && $endDate) {
-            $query->whereDate('start_time', '>=', $startDate)
-                  ->whereDate('start_time', '<=', $endDate);
-        }
+        $boardId = $request->board_id;
 
         $byProject = DB::table('time_entries as e')
             ->leftJoin('projects as p', 'e.project_id', '=', 'p.id')
             ->where('e.user_id', $userId)
-            ->when($startDate && $endDate, fn($q) => $q->whereDate('e.start_time', '>=', $startDate)->whereDate('e.start_time', '<=', $endDate))
+            ->when($boardId, fn ($q) => $q->where('p.board_id', $boardId))
+            ->when($startDate && $endDate, fn ($q) => $q->whereDate('e.start_time', '>=', $startDate)->whereDate('e.start_time', '<=', $endDate))
             ->select(
                 'p.id', 'p.name', 'p.color',
                 DB::raw('COUNT(e.id) as entry_count'),
@@ -33,8 +29,10 @@ class ReportController extends Controller
             ->get();
 
         $byDay = DB::table('time_entries as e')
+            ->leftJoin('projects as p', 'e.project_id', '=', 'p.id')
             ->where('e.user_id', $userId)
-            ->when($startDate && $endDate, fn($q) => $q->whereDate('e.start_time', '>=', $startDate)->whereDate('e.start_time', '<=', $endDate))
+            ->when($boardId, fn ($q) => $q->where('p.board_id', $boardId))
+            ->when($startDate && $endDate, fn ($q) => $q->whereDate('e.start_time', '>=', $startDate)->whereDate('e.start_time', '<=', $endDate))
             ->select(
                 DB::raw('date(e.start_time) as date'),
                 DB::raw('COUNT(*) as entry_count'),

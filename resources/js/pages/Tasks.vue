@@ -3,36 +3,9 @@
     <div class="max-w-full mx-auto px-2">
 
       <!-- Board Selector -->
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg px-6 py-4 mb-4 flex items-center justify-between">
+      <div class="relative z-30 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg px-6 py-4 mb-4 flex items-center justify-between">
         <div class="flex items-center gap-4">
-          <label class="text-sm font-medium text-gray-600">Board</label>
-          <select
-            v-model="selectedBoardId"
-            @change="loadBoard"
-            class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
-          >
-            <option v-for="b in boards" :key="b.id" :value="b.id">{{ b.name }}</option>
-          </select>
-          <button
-            @click="showNewBoardModal = true"
-            class="px-3 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-          >
-            + New Board
-          </button>
-          <button
-            v-if="board"
-            @click="openEditBoardModal"
-            class="px-3 py-2 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Edit
-          </button>
-          <button
-            v-if="board"
-            @click="showLabelsModal = true"
-            class="px-3 py-2 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Labels
-          </button>
+          <h2 class="text-lg font-semibold text-gray-800">{{ board?.name || 'No board' }}</h2>
         </div>
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-1 relative filter-panel-container">
@@ -146,121 +119,6 @@
           </div>
         </div>
       </div>
-
-      <!-- New Board Modal -->
-      <Teleport to="body">
-        <div v-if="showNewBoardModal" class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="showNewBoardModal = false"></div>
-          <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-96">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Create new board</h3>
-            <input
-              v-model="newBoardName"
-              @keydown.enter="createBoard"
-              placeholder="Board name..."
-              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none mb-2"
-            />
-            <input
-              v-model="newBoardDescription"
-              placeholder="Description (optional)"
-              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none mb-4"
-            />
-            <div class="flex justify-end gap-2">
-              <button @click="showNewBoardModal = false" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
-              <button
-                @click="createBoard"
-                :disabled="!newBoardName.trim()"
-                class="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all disabled:opacity-50"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      </Teleport>
-
-      <!-- Edit Board Modal -->
-      <Teleport to="body">
-        <div v-if="showEditBoardModal" class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="showEditBoardModal = false"></div>
-          <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-96">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Edit board</h3>
-            <input
-              v-model="editBoardName"
-              @keydown.enter="updateBoard"
-              placeholder="Board name..."
-              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none mb-2"
-            />
-            <input
-              v-model="editBoardDescription"
-              placeholder="Description (optional)"
-              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none mb-4"
-            />
-            <!-- Board Background -->
-            <div class="mb-4">
-              <p class="text-xs font-medium text-gray-500 mb-2">Background Image</p>
-              <div class="flex items-center gap-3">
-                <div class="w-24 h-14 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
-                  <img v-if="boardBackgroundUrl" :src="boardBackgroundUrl" class="w-full h-full object-cover" alt="Background" />
-                  <span v-else class="text-[10px] text-gray-400">None</span>
-                </div>
-                <div class="space-y-1.5">
-                  <label class="inline-block px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg cursor-pointer hover:shadow-md transition-all">
-                    Upload
-                    <input type="file" accept="image/*" class="hidden" @change="uploadBoardBackground" />
-                  </label>
-                  <button
-                    v-if="boardBackgroundUrl"
-                    @click="removeBoardBackground"
-                    class="block px-3 py-1.5 text-xs font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-all"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                v-if="boards.length > 1"
-                @click="showEditBoardModal = false; showDeleteBoardConfirm = true"
-                class="px-4 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-all"
-              >
-                Delete Board
-              </button>
-              <div class="flex-1"></div>
-              <button @click="showEditBoardModal = false" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
-              <button
-                @click="updateBoard"
-                :disabled="!editBoardName.trim()"
-                class="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all disabled:opacity-50"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      </Teleport>
-
-      <!-- Delete Board Confirmation -->
-      <Teleport to="body">
-        <div v-if="showDeleteBoardConfirm" class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="showDeleteBoardConfirm = false"></div>
-          <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-96">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Delete board</h3>
-            <p class="text-sm text-gray-500 mb-4">
-              Are you sure you want to delete <strong>{{ board?.name }}</strong>? All columns and tasks in this board will be permanently deleted.
-            </p>
-            <div class="flex justify-end gap-2">
-              <button @click="showDeleteBoardConfirm = false" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
-              <button
-                @click="deleteBoard"
-                class="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      </Teleport>
 
       <!-- Kanban Board -->
       <div
@@ -963,99 +821,6 @@
 
     </div>
 
-    <!-- Labels Management Modal -->
-    <Teleport to="body">
-      <div v-if="showLabelsModal" class="fixed inset-0 z-50 flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="showLabelsModal = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-800">Board Labels</h3>
-            <button
-              @click="openBoardLabelModal()"
-              class="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all"
-            >
-              + Add Label
-            </button>
-          </div>
-          <div class="overflow-y-auto flex-1">
-            <div v-if="globalLabels.length" class="space-y-2">
-              <div
-                v-for="(label, index) in globalLabels"
-                :key="label.id"
-                class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                <span class="text-xs text-gray-400 font-mono w-5 shrink-0">{{ index + 1 }}</span>
-                <span class="w-4 h-4 rounded-full shrink-0" :style="{ backgroundColor: label.color }"></span>
-                <span class="text-sm font-medium text-gray-700 flex-1">{{ label.name }}</span>
-                <div class="flex items-center gap-1">
-                  <button @click="reorderBoardLabel(index, -1)" :disabled="index === 0" class="p-1 text-gray-400 hover:text-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
-                  </button>
-                  <button @click="reorderBoardLabel(index, 1)" :disabled="index === globalLabels.length - 1" class="p-1 text-gray-400 hover:text-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                  </button>
-                  <button @click="openBoardLabelModal(label)" class="p-1 text-gray-400 hover:text-indigo-500">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                  </button>
-                  <button @click="deleteBoardLabel(label)" class="p-1 text-gray-400 hover:text-red-500">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-            <p v-else class="text-sm text-gray-400">No labels yet. Add one to get started.</p>
-          </div>
-          <div class="flex justify-end mt-4 pt-4 border-t border-gray-100">
-            <button @click="showLabelsModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <!-- Label Edit Modal (board labels) -->
-    <Teleport to="body">
-      <div v-if="showLabelEditModal" class="fixed inset-0 z-[60] flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showLabelEditModal = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
-          <h3 class="text-lg font-bold text-gray-800 mb-4">{{ editingBoardLabel ? 'Edit Label' : 'New Label' }}</h3>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-600 mb-1">Name</label>
-              <input
-                v-model="boardLabelForm.name"
-                type="text"
-                placeholder="Label name"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                @keydown.enter="saveBoardLabel"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-600 mb-2">Color</label>
-              <div class="grid grid-cols-9 gap-2">
-                <button
-                  v-for="color in labelColorOptions"
-                  :key="color"
-                  @click="boardLabelForm.color = color"
-                  class="w-8 h-8 rounded-lg transition-all"
-                  :class="boardLabelForm.color === color ? 'ring-2 ring-offset-2 ring-indigo-400 scale-110' : 'hover:scale-105'"
-                  :style="{ backgroundColor: color }"
-                ></button>
-              </div>
-            </div>
-          </div>
-          <div class="flex justify-end gap-2 mt-6">
-            <button @click="showLabelEditModal = false" class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-            <button
-              @click="saveBoardLabel"
-              :disabled="!boardLabelForm.name.trim()"
-              class="px-4 py-2 text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {{ editingBoardLabel ? 'Update' : 'Create' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
 
   </AppLayout>
 </template>
@@ -1068,146 +833,29 @@ import { useApi } from '@/composables/useApi';
 import { useProjects } from '@/composables/useProjects';
 import { useTimer } from '@/composables/useTimer';
 import { useBackground } from '@/composables/useBackground';
+import { useBoard } from '@/composables/useBoard';
 
 const { user } = useAuth();
 const api = useApi();
 const { projects, loadProjects } = useProjects();
 const { runningEntry, checkRunning, start: startTimer, stop: stopTimer } = useTimer();
-const { loadBoardBackground, setBackground, clearBoardCache } = useBackground();
+const { loadBoardBackground } = useBackground();
+const { activeBoardId, loadBoards } = useBoard();
 
 // ─── Board State ───────────────────────────────────────────────────
-
-const boards = ref([]);
-const selectedBoardId = ref(sessionStorage.getItem('selectedBoardId') ? Number(sessionStorage.getItem('selectedBoardId')) : null);
+// Board switching now lives in the top nav (useBoard); this page just reacts to
+// the active board. selectedBoardId is kept as an alias so existing references work.
+const selectedBoardId = activeBoardId;
 const board = ref(null);
 
-watch(selectedBoardId, (id) => {
-  if (id) sessionStorage.setItem('selectedBoardId', id);
-  else sessionStorage.removeItem('selectedBoardId');
+watch(activeBoardId, () => {
+  loadBoard();
 });
 
 const columns = computed(() => board.value?.columns || []);
 const totalTaskCount = computed(() =>
   columns.value.reduce((sum, c) => sum + (c.tasks || []).length, 0)
 );
-
-const showNewBoardModal = ref(false);
-const newBoardName = ref('');
-const newBoardDescription = ref('');
-const showEditBoardModal = ref(false);
-const editBoardName = ref('');
-const editBoardDescription = ref('');
-const showDeleteBoardConfirm = ref(false);
-
-// ─── Board Labels Management ───────────────────────────────────────
-const showLabelsModal = ref(false);
-const showLabelEditModal = ref(false);
-const editingBoardLabel = ref(null);
-const boardLabelForm = ref({ name: '', color: '#6366F1' });
-const labelColorOptions = [
-  '#EF4444', '#F97316', '#EAB308',
-  '#22C55E', '#14B8A6', '#3B82F6',
-  '#6366F1', '#8B5CF6', '#EC4899',
-];
-
-function openBoardLabelModal(label = null) {
-  editingBoardLabel.value = label;
-  boardLabelForm.value = label
-    ? { name: label.name, color: label.color }
-    : { name: '', color: '#6366F1' };
-  showLabelEditModal.value = true;
-}
-
-async function saveBoardLabel() {
-  const name = boardLabelForm.value.name.trim();
-  if (!name || !selectedBoardId.value) return;
-  try {
-    if (editingBoardLabel.value) {
-      await api.put(`/boards/${selectedBoardId.value}/labels/${editingBoardLabel.value.id}`, {
-        name,
-        color: boardLabelForm.value.color,
-      });
-    } else {
-      await api.post(`/boards/${selectedBoardId.value}/labels`, {
-        name,
-        color: boardLabelForm.value.color,
-      });
-    }
-    showLabelEditModal.value = false;
-    globalLabels.value = await api.get(`/boards/${selectedBoardId.value}/labels`);
-  } catch (e) {
-    console.error('Failed to save label', e);
-  }
-}
-
-async function deleteBoardLabel(label) {
-  if (!confirm(`Delete label "${label.name}"?`)) return;
-  try {
-    await api.del(`/boards/${selectedBoardId.value}/labels/${label.id}`);
-    globalLabels.value = await api.get(`/boards/${selectedBoardId.value}/labels`);
-  } catch (e) {
-    console.error('Failed to delete label', e);
-  }
-}
-
-async function reorderBoardLabel(index, direction) {
-  const newIndex = index + direction;
-  if (newIndex < 0 || newIndex >= globalLabels.value.length) return;
-  const reordered = [...globalLabels.value];
-  const [moved] = reordered.splice(index, 1);
-  reordered.splice(newIndex, 0, moved);
-  globalLabels.value = reordered;
-  try {
-    await api.patch(`/boards/${selectedBoardId.value}/labels/reorder`, {
-      labelIds: reordered.map(l => l.id),
-    });
-  } catch (e) {
-    console.error('Failed to reorder labels', e);
-    globalLabels.value = await api.get(`/boards/${selectedBoardId.value}/labels`);
-  }
-}
-
-// ─── Board Background ──────────────────────────────────────────────
-const boardBackgroundUrl = ref(null);
-
-async function loadEditBoardBackground() {
-  if (!selectedBoardId.value) return;
-  try {
-    const data = await api.get(`/boards/${selectedBoardId.value}/background/status`);
-    boardBackgroundUrl.value = data.exists ? data.url : null;
-  } catch {
-    boardBackgroundUrl.value = null;
-  }
-}
-
-async function uploadBoardBackground(event) {
-  const file = event.target.files?.[0];
-  if (!file || !selectedBoardId.value) return;
-  if (file.size > 40 * 1024 * 1024) { alert('File size must be under 40MB.'); return; }
-  const formData = new FormData();
-  formData.append('background', file);
-  try {
-    const data = await api.post(`/boards/${selectedBoardId.value}/background`, formData);
-    boardBackgroundUrl.value = data.url || null;
-    clearBoardCache(selectedBoardId.value);
-    setBackground(data.url || null);
-  } catch (e) {
-    console.error('Failed to upload background', e);
-  }
-  event.target.value = '';
-}
-
-async function removeBoardBackground() {
-  if (!selectedBoardId.value) return;
-  try {
-    await api.del(`/boards/${selectedBoardId.value}/background`);
-    boardBackgroundUrl.value = null;
-    clearBoardCache(selectedBoardId.value);
-    setBackground(null);
-  } catch (e) {
-    console.error('Failed to remove background', e);
-  }
-}
 
 // ─── Filters ──────────────────────────────────────────────────────
 const showFilterPanel = ref(false);
@@ -1323,62 +971,6 @@ const filteredColumns = computed(() => {
     tasks: (col.tasks || []).filter(taskMatchesFilters),
   }));
 });
-
-async function loadBoards() {
-  boards.value = await api.get('/boards');
-  if (boards.value.length && !selectedBoardId.value) {
-    selectedBoardId.value = boards.value[0].id;
-  }
-  if (selectedBoardId.value) {
-    await loadBoard();
-  }
-}
-
-async function createBoard() {
-  if (!newBoardName.value.trim()) return;
-  const created = await api.post('/boards', {
-    name: newBoardName.value.trim(),
-    description: newBoardDescription.value.trim(),
-  });
-  boards.value.unshift(created);
-  selectedBoardId.value = created.id;
-  showNewBoardModal.value = false;
-  newBoardName.value = '';
-  newBoardDescription.value = '';
-  await loadBoard();
-}
-
-function openEditBoardModal() {
-  editBoardName.value = board.value.name;
-  editBoardDescription.value = board.value.description || '';
-  boardBackgroundUrl.value = null;
-  loadEditBoardBackground();
-  showEditBoardModal.value = true;
-}
-
-async function updateBoard() {
-  if (!editBoardName.value.trim()) return;
-  const updated = await api.put(`/boards/${selectedBoardId.value}`, {
-    name: editBoardName.value.trim(),
-    description: editBoardDescription.value.trim(),
-  });
-  const idx = boards.value.findIndex(b => b.id === updated.id);
-  if (idx >= 0) boards.value[idx] = { ...boards.value[idx], ...updated };
-  if (board.value) board.value.name = updated.name;
-  showEditBoardModal.value = false;
-}
-
-async function deleteBoard() {
-  await api.del(`/boards/${selectedBoardId.value}`);
-  boards.value = boards.value.filter(b => b.id !== selectedBoardId.value);
-  selectedBoardId.value = boards.value.length ? boards.value[0].id : null;
-  showDeleteBoardConfirm.value = false;
-  if (selectedBoardId.value) {
-    await loadBoard();
-  } else {
-    board.value = null;
-  }
-}
 
 async function loadBoard() {
   if (!selectedBoardId.value) return;
@@ -2317,9 +1909,10 @@ function onFilterKeydown(event) {
 onMounted(async () => {
   document.addEventListener('click', onClickOutside, true);
   document.addEventListener('keydown', onGlobalKeydown);
+  await loadBoards();
   await Promise.all([
-    loadBoards(),
-    loadProjects(),
+    loadBoard(),
+    loadProjects(activeBoardId.value),
     checkRunning(),
   ]);
 });

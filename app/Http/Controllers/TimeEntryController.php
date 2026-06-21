@@ -1,10 +1,11 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\TimeEntry;
 use App\Models\Task;
-use Illuminate\Http\Request;
+use App\Models\TimeEntry;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class TimeEntryController extends Controller
 {
@@ -14,12 +15,16 @@ class TimeEntryController extends Controller
             ->where('user_id', $request->user()->id)
             ->orderByDesc('start_time');
 
-        if ($request->start_date && $request->end_date) {
-            $query->whereDate('start_time', '>=', $request->start_date)
-                  ->whereDate('start_time', '<=', $request->end_date);
+        if ($request->board_id) {
+            $query->whereHas('project', fn ($q) => $q->where('board_id', $request->board_id));
         }
 
-        return $query->get()->map(fn($e) => $this->formatEntry($e));
+        if ($request->start_date && $request->end_date) {
+            $query->whereDate('start_time', '>=', $request->start_date)
+                ->whereDate('start_time', '<=', $request->end_date);
+        }
+
+        return $query->get()->map(fn ($e) => $this->formatEntry($e));
     }
 
     public function running(Request $request)
@@ -35,6 +40,23 @@ class TimeEntryController extends Controller
 
     public function start(Request $request)
     {
+        $request->validate([
+            'project_id' => 'nullable|exists:projects,id',
+            'task_id' => 'nullable|exists:tasks,id',
+            'description' => 'nullable|string',
+        ]);
+
+        // Every entry must belong to a board via its project. When starting from a
+        // task without an explicit project, fall back to the task's own project or
+        // the task's board default project ("General").
+        $projectId = $request->project_id;
+        if (! $projectId && $request->task_id) {
+            $task = Task::with('column.board')->find($request->task_id);
+            $projectId = $task?->project_id
+                ?? $task?->column?->board?->projects()->orderBy('id')->value('id');
+        }
+        abort_if(! $projectId, 422, 'A project is required to start a timer.');
+
         $now = Carbon::now();
 
         // Stop any running timer
@@ -43,7 +65,7 @@ class TimeEntryController extends Controller
             ->update(['end_time' => $now]);
 
         $entry = TimeEntry::create([
-            'project_id' => $request->project_id,
+            'project_id' => $projectId,
             'task_id' => $request->task_id,
             'description' => $request->description ?? '',
             'start_time' => $now,
@@ -100,6 +122,7 @@ class TimeEntryController extends Controller
     public function destroy(TimeEntry $entry)
     {
         $entry->delete();
+
         return response()->json(['success' => true]);
     }
 
@@ -132,6 +155,7 @@ class TimeEntryController extends Controller
             if ($e->task_id !== (int) $taskId) {
                 $arr['subtask_name'] = $e->task?->title;
             }
+
             return $arr;
         });
     }
@@ -162,9 +186,13 @@ class TimeEntryController extends Controller
         $query = TimeEntry::with('project')
             ->where('user_id', $request->user()->id);
 
+        if ($request->board_id) {
+            $query->whereHas('project', fn ($q) => $q->where('board_id', $request->board_id));
+        }
+
         if ($request->start_date && $request->end_date) {
             $query->whereDate('start_time', '>=', $request->start_date)
-                  ->whereDate('start_time', '<=', $request->end_date);
+                ->whereDate('start_time', '<=', $request->end_date);
         }
 
         if ($request->task_id) {
@@ -181,13 +209,15 @@ class TimeEntryController extends Controller
                 ? $e->start_time->diffInMinutes($e->end_time)
                 : $e->start_time->diffInMinutes(now());
 
-            if (round($duration) <= 0) continue;
+            if (round($duration) <= 0) {
+                continue;
+            }
 
             $totalMinutes += $duration;
             $rows[] = [
                 $e->id,
-                '"' . str_replace('"', '""', $e->project?->name ?? 'No Project') . '"',
-                '"' . str_replace('"', '""', $e->description ?? '') . '"',
+                '"'.str_replace('"', '""', $e->project?->name ?? 'No Project').'"',
+                '"'.str_replace('"', '""', $e->description ?? '').'"',
                 $e->start_time->toDateTimeString(),
                 $e->end_time ? $e->end_time->toDateTimeString() : 'Running',
                 round($duration, 2),
@@ -200,15 +230,15 @@ class TimeEntryController extends Controller
         $rem = $totalRounded % (8 * 60);
         $hours = intdiv($rem, 60);
         $mins = $rem % 60;
-        $formatted = ($days > 0 ? "{$days}d " : '') . ($hours > 0 ? "{$hours}h " : '') . "{$mins}m";
+        $formatted = ($days > 0 ? "{$days}d " : '').($hours > 0 ? "{$hours}h " : '')."{$mins}m";
 
-        $rows[] = ['', '', '"TOTAL"', '', '', $totalRounded, '"' . trim($formatted) . '"'];
+        $rows[] = ['', '', '"TOTAL"', '', '', $totalRounded, '"'.trim($formatted).'"'];
 
-        $csv = implode("\n", array_map(fn($r) => implode(',', $r), $rows));
+        $csv = implode("\n", array_map(fn ($r) => implode(',', $r), $rows));
 
         $filename = $request->task_id
-            ? "task-{$request->task_id}-time-entries-" . now()->toDateString() . '.csv'
-            : 'time-entries-' . now()->toDateString() . '.csv';
+            ? "task-{$request->task_id}-time-entries-".now()->toDateString().'.csv'
+            : 'time-entries-'.now()->toDateString().'.csv';
 
         return response($csv)
             ->header('Content-Type', 'text/csv')
@@ -221,6 +251,7 @@ class TimeEntryController extends Controller
         $arr['project_name'] = $entry->project?->name;
         $arr['project_color'] = $entry->project?->color;
         $arr['task_title'] = $entry->task?->title;
+
         return $arr;
     }
 }

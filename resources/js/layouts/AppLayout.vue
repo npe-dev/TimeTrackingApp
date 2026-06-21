@@ -3,6 +3,24 @@
     <!-- Navigation -->
     <header class="bg-white/95 backdrop-blur-sm shadow-lg px-6 py-4">
       <div class="relative flex items-center">
+        <!-- Board picker (top-level board switching) -->
+        <div class="flex items-center gap-2">
+          <select
+            v-if="boards.length"
+            :value="activeBoardId"
+            @change="onBoardSelect($event)"
+            class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          >
+            <option v-for="b in boards" :key="b.id" :value="b.id">{{ b.name }}</option>
+          </select>
+          <button
+            @click="startCreateBoard"
+            class="text-sm text-indigo-500 hover:text-indigo-700 font-medium px-2 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
+            title="New board"
+          >
+            + New
+          </button>
+        </div>
         <nav class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
           <router-link
             v-for="link in navLinks"
@@ -36,12 +54,28 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useAuth } from '@/composables/useAuth';
 import { useBackground } from '@/composables/useBackground';
+import { useBoard } from '@/composables/useBoard';
 
 const { user, logout } = useAuth();
 const { backgroundUrl } = useBackground();
+const { boards, activeBoardId, loadBoards, setActiveBoard, createBoard } = useBoard();
+
+function onBoardSelect(event) {
+  setActiveBoard(Number(event.target.value));
+}
+
+async function startCreateBoard() {
+  const name = window.prompt('New board name:');
+  if (!name || !name.trim()) return;
+  await createBoard({ name: name.trim() });
+}
+
+onMounted(() => {
+  loadBoards();
+});
 
 const navLinks = [
   { to: '/', label: 'Timer' },

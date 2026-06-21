@@ -371,11 +371,13 @@ import { useAuth } from '@/composables/useAuth';
 import { useApi } from '@/composables/useApi';
 import { useTimer } from '@/composables/useTimer';
 import { useProjects } from '@/composables/useProjects';
+import { useBoard } from '@/composables/useBoard';
 
 const { user } = useAuth();
 const api = useApi();
 const { runningEntry, checkRunning, start, stop, stopAt, startHeartbeat } = useTimer();
 const { projects, loadProjects, createProject, deleteProject, getProjectById } = useProjects();
+const { activeBoardId } = useBoard();
 
 // ─── Timer Display ──────────────────────────────────────────────
 const elapsedSeconds = ref(0);
@@ -433,6 +435,10 @@ const runningProject = computed(() => {
 const timerForm = reactive({ project_id: null, description: '' });
 
 async function startTimer() {
+  if (!timerForm.project_id) {
+    alert('Please select a project before starting the timer.');
+    return;
+  }
   await start({
     project_id: timerForm.project_id,
     description: timerForm.description,
@@ -456,6 +462,7 @@ async function loadEntries() {
   entries.value = await api.get('/entries', {
     start_date: start.toISOString().slice(0, 10),
     end_date: now.toISOString().slice(0, 10),
+    board_id: activeBoardId.value,
   });
 }
 
@@ -614,8 +621,8 @@ const showProjectsModal = ref(false);
 const newProject = reactive({ name: '', color: '#6366f1' });
 
 async function addProject() {
-  if (!newProject.name.trim()) return;
-  await createProject({ name: newProject.name.trim(), color: newProject.color });
+  if (!newProject.name.trim() || !activeBoardId.value) return;
+  await createProject({ name: newProject.name.trim(), color: newProject.color, board_id: activeBoardId.value });
   newProject.name = '';
   newProject.color = '#6366f1';
 }
@@ -630,7 +637,8 @@ function exportCsv() {
   const now = new Date();
   const start = new Date(now);
   start.setDate(start.getDate() - 30);
-  const url = `/api/entries/export/csv?start_date=${start.toISOString().slice(0, 10)}&end_date=${now.toISOString().slice(0, 10)}`;
+  const boardParam = activeBoardId.value ? `&board_id=${activeBoardId.value}` : '';
+  const url = `/api/entries/export/csv?start_date=${start.toISOString().slice(0, 10)}&end_date=${now.toISOString().slice(0, 10)}${boardParam}`;
   window.open(url, '_blank');
 }
 
@@ -767,9 +775,15 @@ watch(runningEntry, (val) => {
   else stopIdleDetection();
 });
 
+// Reload board-scoped projects and entries when the active board changes.
+watch(activeBoardId, async () => {
+  timerForm.project_id = null;
+  await Promise.all([loadProjects(activeBoardId.value), loadEntries()]);
+});
+
 // ─── Lifecycle ──────────────────────────────────────────────────
 onMounted(async () => {
-  await Promise.all([loadProjects(), checkRunning(), loadEntries()]);
+  await Promise.all([loadProjects(activeBoardId.value), checkRunning(), loadEntries()]);
   // Ask for desktop-notification permission so we can alert from a background tab.
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();

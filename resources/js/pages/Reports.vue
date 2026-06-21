@@ -128,13 +128,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useApi } from '@/composables/useApi';
+import { useBoard } from '@/composables/useBoard';
 
 const { fetchUser } = useAuth();
 const { get } = useApi();
+const { activeBoardId } = useBoard();
 
 const startDate = ref('');
 const endDate = ref('');
@@ -203,6 +205,7 @@ async function loadReport() {
     const data = await get('/reports/summary', {
       start_date: startDate.value,
       end_date: endDate.value,
+      board_id: activeBoardId.value,
     });
     summary.value = {
       totalMinutes: data.total_minutes ?? 0,
@@ -221,8 +224,12 @@ function exportCsv() {
     start_date: startDate.value,
     end_date: endDate.value,
   });
+  if (activeBoardId.value) params.set('board_id', activeBoardId.value);
   window.open(`/api/entries/export/csv?${params.toString()}`, '_blank');
 }
+
+// Reload the report when the active board changes.
+watch(activeBoardId, () => loadReport());
 
 onMounted(async () => {
   await fetchUser();

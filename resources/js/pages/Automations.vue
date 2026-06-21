@@ -13,17 +13,6 @@
               + New Automation
             </button>
           </div>
-          <div class="mb-4">
-            <select
-              v-model="filterBoardId"
-              @change="loadAutomations"
-              class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            >
-              <option :value="null">All Boards</option>
-              <option v-for="board in boards" :key="board.id" :value="board.id">{{ board.name }}</option>
-            </select>
-          </div>
-
           <!-- Automation Cards -->
           <div v-if="automations.length" class="space-y-3">
             <div
@@ -100,19 +89,6 @@
                 placeholder="My automation"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
-            </div>
-
-            <!-- Board -->
-            <div>
-              <label class="block text-sm font-medium text-gray-600 mb-1">Board <span class="text-red-400">*</span></label>
-              <select
-                v-model="builderForm.board_id"
-                @change="onBoardChange"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              >
-                <option :value="null" disabled>Select a board</option>
-                <option v-for="board in boards" :key="board.id" :value="board.id">{{ board.name }}</option>
-              </select>
             </div>
 
             <!-- Step 1: Trigger -->
@@ -294,18 +270,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useApi } from '@/composables/useApi';
+import { useBoard } from '@/composables/useBoard';
 
 const { fetchUser } = useAuth();
 const { get, post, put, del, patch } = useApi();
+const { activeBoardId } = useBoard();
 
 // --- List View State ---
 const automations = ref([]);
-const boards = ref([]);
-const filterBoardId = ref(null);
 
 // --- Builder State ---
 const showBuilder = ref(false);
@@ -367,18 +343,10 @@ function describeAction(action) {
 }
 
 // --- API ---
-async function loadBoards() {
-  try {
-    boards.value = await get('/boards');
-  } catch (e) {
-    console.error('Failed to load boards', e);
-  }
-}
-
 async function loadAutomations() {
   try {
     const params = {};
-    if (filterBoardId.value) params.board_id = filterBoardId.value;
+    if (activeBoardId.value) params.board_id = activeBoardId.value;
     automations.value = await get('/automations', params);
   } catch (e) {
     console.error('Failed to load automations', e);
@@ -400,8 +368,12 @@ async function loadBoardColumns(boardId) {
 }
 
 async function loadGlobalLabels() {
+  if (!activeBoardId.value) {
+    globalLabels.value = [];
+    return;
+  }
   try {
-    globalLabels.value = await get('/global-labels');
+    globalLabels.value = await get(`/boards/${activeBoardId.value}/labels`);
   } catch (e) {
     console.error('Failed to load labels', e);
   }
@@ -442,11 +414,11 @@ function openBuilder(automation = null) {
   } else {
     builderForm.value = {
       name: '',
-      board_id: null,
+      board_id: activeBoardId.value,
       trigger: emptyTrigger(),
       actions: [emptyAction()],
     };
-    selectedBoardColumns.value = [];
+    loadBoardColumns(activeBoardId.value);
   }
   loadGlobalLabels();
   showBuilder.value = true;
@@ -459,12 +431,6 @@ function cancelBuilder() {
 
 function selectTrigger(type) {
   builderForm.value.trigger = { ...emptyTrigger(), type };
-}
-
-function onBoardChange() {
-  loadBoardColumns(builderForm.value.board_id);
-  builderForm.value.trigger.column_id = null;
-  builderForm.value.actions.forEach(a => { a.column_id = null; });
 }
 
 function onActionTypeChange(index) {
@@ -503,9 +469,11 @@ async function saveAutomation() {
   }
 }
 
+// Reload automations when the active board changes.
+watch(activeBoardId, () => loadAutomations());
+
 onMounted(async () => {
   await fetchUser();
-  loadBoards();
   loadAutomations();
 });
 </script>

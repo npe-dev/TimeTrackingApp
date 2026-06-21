@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Board;
@@ -17,20 +18,27 @@ class BoardController extends Controller
     public function show(Board $board)
     {
         $board->load('columns');
+
         return $board;
     }
 
     public function store(Request $request)
     {
-        return Board::create([
+        $board = Board::create([
             'name' => $request->name,
             'description' => $request->description ?? '',
         ]);
+
+        // Every board needs at least one project so a timer can always be started.
+        $board->projects()->create(['name' => 'General', 'color' => '#3B82F6']);
+
+        return $board;
     }
 
     public function update(Request $request, Board $board)
     {
         $board->update($request->only('name', 'description'));
+
         return $board;
     }
 
@@ -40,6 +48,7 @@ class BoardController extends Controller
             Storage::disk('public')->delete("backgrounds/board-{$board->id}.{$ext}");
         }
         $board->delete();
+
         return response()->json(['success' => true]);
     }
 
@@ -51,10 +60,11 @@ class BoardController extends Controller
                 return response()->json([
                     'exists' => true,
                     // Version by file mtime: stable across loads (cache hit), changes on re-upload.
-                    'url' => '/storage/' . $path . '?v=' . Storage::disk('public')->lastModified($path),
+                    'url' => '/storage/'.$path.'?v='.Storage::disk('public')->lastModified($path),
                 ]);
             }
         }
+
         return response()->json(['exists' => false]);
     }
 
@@ -68,9 +78,10 @@ class BoardController extends Controller
         }
         $path = "backgrounds/board-{$board->id}.{$ext}";
         $file->storeAs('backgrounds', "board-{$board->id}.{$ext}", 'public');
+
         return response()->json([
             'success' => true,
-            'url' => '/storage/' . $path . '?v=' . Storage::disk('public')->lastModified($path),
+            'url' => '/storage/'.$path.'?v='.Storage::disk('public')->lastModified($path),
         ]);
     }
 
@@ -79,6 +90,7 @@ class BoardController extends Controller
         foreach ($this->extensions as $ext) {
             Storage::disk('public')->delete("backgrounds/board-{$board->id}.{$ext}");
         }
+
         return response()->json(['success' => true]);
     }
 }
