@@ -133,6 +133,7 @@
           </span>
           <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
             <button
+              v-if="!displayEntry"
               @click="restartEntry(entry)"
               class="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition"
               title="Start a new timer with this entry's project, task and description"

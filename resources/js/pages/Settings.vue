@@ -103,19 +103,66 @@
             :key="p.id"
             class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-50 group"
           >
-            <div class="flex items-center gap-3">
-              <span class="w-4 h-4 rounded-full" :style="{ backgroundColor: p.color }"></span>
-              <span class="text-sm font-medium text-gray-700">{{ p.name }}</span>
-            </div>
-            <button
-              @click="removeProject(p.id)"
-              class="text-gray-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"
-              title="Delete project"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
+            <!-- Edit mode -->
+            <template v-if="editingProjectId === p.id">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <input
+                  v-model="editProject.color"
+                  type="color"
+                  class="w-8 h-8 rounded-lg border-0 cursor-pointer p-0.5 shrink-0"
+                />
+                <input
+                  v-model="editProject.name"
+                  type="text"
+                  class="flex-1 min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+                  @keyup.enter="saveProject"
+                  @keyup.esc="cancelEditProject"
+                />
+              </div>
+              <div class="flex items-center gap-1 shrink-0 ml-2">
+                <button
+                  @click="saveProject"
+                  :disabled="!editProject.name.trim()"
+                  class="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition disabled:opacity-50"
+                >
+                  Save
+                </button>
+                <button
+                  @click="cancelEditProject"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </template>
+
+            <!-- Display mode -->
+            <template v-else>
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="w-4 h-4 rounded-full shrink-0" :style="{ backgroundColor: p.color }"></span>
+                <span class="text-sm font-medium text-gray-700 truncate">{{ p.name }}</span>
+              </div>
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                <button
+                  @click="startEditProject(p)"
+                  class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition"
+                  title="Edit project"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button
+                  @click="removeProject(p.id)"
+                  class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
+                  title="Delete project"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </template>
           </div>
         </div>
         <p v-else class="text-sm text-gray-400">No projects yet. Add one to track time against it.</p>
@@ -220,7 +267,7 @@ import { useProjects } from '@/composables/useProjects';
 const api = useApi();
 const { activeBoardId, activeBoard, updateBoard, deleteBoard, boards } = useBoard();
 const { loadBoardBackground, setBackground, clearBoardCache } = useBackground();
-const { projects, loadProjects, createProject, deleteProject } = useProjects();
+const { projects, loadProjects, createProject, updateProject, deleteProject } = useProjects();
 
 // ─── Board ─────────────────────────────────────────────────────────
 const boardForm = reactive({ name: '', description: '' });
@@ -308,6 +355,29 @@ async function addProject() {
 async function removeProject(id) {
   if (!confirm('Delete this project? Existing time entries will keep their data but lose the project link.')) return;
   await deleteProject(id);
+}
+
+// Inline edit of an existing project's name + color.
+const editingProjectId = ref(null);
+const editProject = reactive({ name: '', color: '#6366f1' });
+
+function startEditProject(p) {
+  editingProjectId.value = p.id;
+  editProject.name = p.name;
+  editProject.color = p.color;
+}
+
+function cancelEditProject() {
+  editingProjectId.value = null;
+}
+
+async function saveProject() {
+  if (!editProject.name.trim() || !editingProjectId.value) return;
+  await updateProject(editingProjectId.value, {
+    name: editProject.name.trim(),
+    color: editProject.color,
+  });
+  editingProjectId.value = null;
 }
 
 // ─── Labels ────────────────────────────────────────────────────────
