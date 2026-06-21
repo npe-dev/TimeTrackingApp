@@ -69,6 +69,58 @@
         </div>
       </div>
 
+      <!-- Projects -->
+      <div v-if="activeBoardId" class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Projects</h3>
+
+        <!-- Add Project -->
+        <div class="flex items-center gap-3 mb-4">
+          <input
+            v-model="newProject.color"
+            type="color"
+            class="w-10 h-10 rounded-lg border-0 cursor-pointer p-0.5"
+          />
+          <input
+            v-model="newProject.name"
+            type="text"
+            placeholder="New project name"
+            class="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+            @keyup.enter="addProject"
+          />
+          <button
+            @click="addProject"
+            :disabled="!newProject.name.trim()"
+            class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold shadow hover:shadow-lg transition disabled:opacity-50"
+          >
+            Add
+          </button>
+        </div>
+
+        <!-- Project List -->
+        <div v-if="projects.length" class="space-y-2">
+          <div
+            v-for="p in projects"
+            :key="p.id"
+            class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-50 group"
+          >
+            <div class="flex items-center gap-3">
+              <span class="w-4 h-4 rounded-full" :style="{ backgroundColor: p.color }"></span>
+              <span class="text-sm font-medium text-gray-700">{{ p.name }}</span>
+            </div>
+            <button
+              @click="removeProject(p.id)"
+              class="text-gray-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"
+              title="Delete project"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <p v-else class="text-sm text-gray-400">No projects yet. Add one to track time against it.</p>
+      </div>
+
       <!-- Labels -->
       <div v-if="activeBoardId" class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
         <div class="flex items-center justify-between mb-4">
@@ -163,10 +215,12 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { useApi } from '@/composables/useApi';
 import { useBoard } from '@/composables/useBoard';
 import { useBackground } from '@/composables/useBackground';
+import { useProjects } from '@/composables/useProjects';
 
 const api = useApi();
 const { activeBoardId, activeBoard, updateBoard, deleteBoard, boards } = useBoard();
 const { loadBoardBackground, setBackground, clearBoardCache } = useBackground();
+const { projects, loadProjects, createProject, deleteProject } = useProjects();
 
 // ─── Board ─────────────────────────────────────────────────────────
 const boardForm = reactive({ name: '', description: '' });
@@ -239,6 +293,21 @@ async function removeBoardBackground() {
   } catch (e) {
     console.error('Failed to remove background', e);
   }
+}
+
+// ─── Projects ──────────────────────────────────────────────────────
+const newProject = reactive({ name: '', color: '#6366f1' });
+
+async function addProject() {
+  if (!newProject.name.trim() || !activeBoardId.value) return;
+  await createProject({ name: newProject.name.trim(), color: newProject.color, board_id: activeBoardId.value });
+  newProject.name = '';
+  newProject.color = '#6366f1';
+}
+
+async function removeProject(id) {
+  if (!confirm('Delete this project? Existing time entries will keep their data but lose the project link.')) return;
+  await deleteProject(id);
 }
 
 // ─── Labels ────────────────────────────────────────────────────────
@@ -316,6 +385,7 @@ function refreshForBoard() {
   seedBoardForm();
   loadBackgroundStatus();
   loadLabels();
+  loadProjects(activeBoardId.value);
 }
 
 watch(activeBoardId, refreshForBoard);
