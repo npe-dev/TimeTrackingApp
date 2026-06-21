@@ -974,14 +974,19 @@ const filteredColumns = computed(() => {
 
 async function loadBoard() {
   if (!selectedBoardId.value) return;
-  board.value = await api.get(`/boards/${selectedBoardId.value}`);
-  if (board.value?.columns) {
+  // Fetch the board and all its column tasks BEFORE assigning to board.value.
+  // Assigning a board whose columns have no tasks yet (then filling them in)
+  // makes every card blank out and reappear — a visible flicker, e.g. right
+  // after a drag-and-drop. Assemble fully, then swap in one go.
+  const fetched = await api.get(`/boards/${selectedBoardId.value}`);
+  if (fetched?.columns) {
     await Promise.all(
-      board.value.columns.map(async (col) => {
+      fetched.columns.map(async (col) => {
         col.tasks = await api.get(`/columns/${col.id}/tasks`);
       })
     );
   }
+  board.value = fetched;
   try {
     globalLabels.value = await api.get(`/boards/${selectedBoardId.value}/labels`);
   } catch {
