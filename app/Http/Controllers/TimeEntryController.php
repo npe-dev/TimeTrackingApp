@@ -196,7 +196,13 @@ class TimeEntryController extends Controller
         }
 
         if ($request->task_id) {
-            $query->where('task_id', $request->task_id);
+            // Include the card's own entries plus all of its subtasks' entries,
+            // matching what the card's time list shows (see taskEntries()).
+            $task = Task::find($request->task_id);
+            $taskIds = $task
+                ? array_merge([(int) $request->task_id], $task->subtasks()->pluck('id')->all())
+                : [(int) $request->task_id];
+            $query->whereIn('task_id', $taskIds);
         }
 
         $entries = $query->orderBy('start_time')->get();
