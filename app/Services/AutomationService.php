@@ -36,7 +36,7 @@ class AutomationService
     private static function matchesTrigger(string $triggerType, array $config, string $eventType, array $context): bool
     {
         return match ($triggerType) {
-            'card_done' => $eventType === 'task_moved' && ($context['new_column_id'] ?? null) == ($config['done_column_id'] ?? null),
+            'card_done' => $eventType === 'task_completed',
             'card_deleted' => $eventType === 'task_deleted',
             'card_created' => $eventType === 'task_created' && (!isset($config['column_id']) || $config['column_id'] == $context['column_id']),
             'card_added_to', 'card_moved_into' => $eventType === 'task_moved' && ($context['new_column_id'] ?? null) == ($config['column_id'] ?? null),

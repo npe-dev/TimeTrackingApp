@@ -200,9 +200,19 @@ class TaskController extends Controller
 
     public function toggleComplete(Task $task)
     {
+        $wasCompleted = (bool) $task->completed_at;
         $task->update([
             'completed_at' => $task->completed_at ? null : now(),
         ]);
+
+        // Fire the "card done" automation only when transitioning into the done state.
+        if (!$wasCompleted) {
+            AutomationService::run('task_completed', [
+                'task_id' => $task->id,
+                'column_id' => $task->column_id,
+            ]);
+        }
+
         return $task->fresh();
     }
 

@@ -1183,7 +1183,7 @@ async function loadEditBoardBackground() {
 async function uploadBoardBackground(event) {
   const file = event.target.files?.[0];
   if (!file || !selectedBoardId.value) return;
-  if (file.size > 10 * 1024 * 1024) { alert('File size must be under 10MB.'); return; }
+  if (file.size > 40 * 1024 * 1024) { alert('File size must be under 40MB.'); return; }
   const formData = new FormData();
   formData.append('background', file);
   try {
@@ -1590,13 +1590,18 @@ function isTaskDone(task) {
 }
 
 async function markTaskDone(task) {
+  const wasDone = isTaskDone(task);
   // Stop timer if running on this task (only when marking done, not when un-checking)
-  if (!isTaskDone(task) && isTimerRunningForTask(task.id)) {
+  if (!wasDone && isTimerRunningForTask(task.id)) {
     await stopTimer();
   }
-  // Toggle completion in place — the card stays where it is
   const updated = await api.patch(`/tasks/${task.id}/toggle-complete`);
   task.completed_at = updated.completed_at;
+  // Marking done can trigger automations (move card, add label, shift due date).
+  // Reload so those server-side changes show without a manual refresh.
+  if (!wasDone) {
+    await loadBoard();
+  }
 }
 
 // ─── Drag & Drop ───────────────────────────────────────────────────
@@ -2200,8 +2205,10 @@ function renderMarkdown(text) {
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     // Inline code
     .replace(/`(.+?)`/g, '<code class="bg-gray-100 text-indigo-600 px-1 rounded text-xs">$1</code>')
-    // Links
+    // Markdown links [text](url)
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-indigo-500 hover:underline">$1</a>')
+    // Bare URLs (not already inside an href="..." or >...</a>)
+    .replace(/(^|[^"'>=])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="text-indigo-500 hover:underline">$2</a>')
     // Line breaks (but not after block elements)
     .replace(/\n(?!<[hlu])/g, '<br>');
   return html;
@@ -2501,6 +2508,9 @@ onUnmounted(() => {
   cursor: grab;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
+  /* Center the columns when they fit; the `safe` keyword falls back to
+     start-alignment when they overflow so scrolling still reaches the first one. */
+  justify-content: safe center;
 }
 
 .board-container::-webkit-scrollbar {

@@ -19,7 +19,10 @@
               :style="{ backgroundColor: runningProject?.color || '#6366f1' }"
             ></span>
             {{ runningProject?.name || 'No project' }}
-            <span v-if="runningEntry.description" class="text-green-500">
+            <span v-if="runningEntry.task_title" class="text-green-600">
+              &mdash; {{ runningEntry.task_title }}
+            </span>
+            <span v-else-if="runningEntry.description" class="text-green-500">
               &mdash; {{ runningEntry.description }}
             </span>
           </span>
@@ -122,7 +125,7 @@
           ></span>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-gray-800 truncate">
-              {{ entry.description || 'No description' }}
+              {{ entry.description || entry.task_title || 'No description' }}
             </p>
             <p class="text-xs text-gray-400">
               {{ getProjectById(entry.project_id)?.name || 'No project' }}
@@ -406,7 +409,10 @@ function updateElapsed() {
   if (!runningEntry.value?.start_time) return;
   const start = new Date(runningEntry.value.start_time).getTime();
   elapsedSeconds.value = Math.max(0, Math.floor((Date.now() - start) / 1000));
-  document.title = `${formattedTimer.value} - Time Tracking`;
+  // While the idle alert is flashing the title, don't clobber it with the clock.
+  if (!idleAlerting) {
+    document.title = `${formattedTimer.value} - Time Tracking`;
+  }
 }
 
 watch(runningEntry, (val) => {
@@ -636,6 +642,59 @@ let idleCheckInterval = null;
 let idleCountdownInterval = null;
 let idleStartTime = null;
 
+// ─── Background-tab attention grabbers ──────────────────────────
+// A browser can't force-focus a background tab, so instead we (1) post a
+// desktop notification, (2) flash the tab title, and (3) beep.
+let idleAlerting = false;
+let titleFlashInterval = null;
+let idleNotification = null;
+
+function beep() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.2);
+    osc.onended = () => ctx.close();
+  } catch (e) { /* audio is best-effort */ }
+}
+
+function startIdleAlert() {
+  idleAlerting = true;
+  beep();
+
+  // Flash the tab title so a background tab visibly signals.
+  let on = true;
+  document.title = '⏰ Still working?';
+  titleFlashInterval = setInterval(() => {
+    document.title = on ? '⏰ Still working?' : `${formattedTimer.value} - Time Tracking`;
+    on = !on;
+  }, 1000);
+
+  // Desktop notification works even when the tab/window is hidden.
+  if ('Notification' in window && Notification.permission === 'granted') {
+    idleNotification = new Notification('Are you still working?', {
+      body: 'Your timer will stop soon unless you confirm.',
+      requireInteraction: true,
+      tag: 'idle-timer',
+    });
+    idleNotification.onclick = () => { window.focus(); idleNotification?.close(); };
+  }
+}
+
+function stopIdleAlert() {
+  idleAlerting = false;
+  if (titleFlashInterval) { clearInterval(titleFlashInterval); titleFlashInterval = null; }
+  if (idleNotification) { idleNotification.close(); idleNotification = null; }
+}
+
 function onActivity() {
   lastActivity = Date.now();
 }
@@ -654,15 +713,17 @@ function stopIdleDetection() {
   window.removeEventListener('click', onActivity);
   if (idleCheckInterval) { clearInterval(idleCheckInterval); idleCheckInterval = null; }
   clearIdleCountdown();
+  stopIdleAlert();
 }
 
 function checkIdle() {
   if (!runningEntry.value) return;
   const idleMs = Date.now() - lastActivity;
-  if (idleMs >= 5 * 60 * 1000 && !showIdleModal.value) {
+  if (idleMs >= 30 * 60 * 1000 && !showIdleModal.value) {
     idleStartTime = new Date(lastActivity);
     showIdleModal.value = true;
     idleCountdown.value = 120;
+    startIdleAlert();
     idleCountdownInterval = setInterval(() => {
       idleCountdown.value--;
       if (idleCountdown.value <= 0) {
@@ -680,12 +741,14 @@ function clearIdleCountdown() {
 function dismissIdle() {
   showIdleModal.value = false;
   clearIdleCountdown();
+  stopIdleAlert();
   lastActivity = Date.now();
 }
 
 async function stopTimerAtIdleStart() {
   showIdleModal.value = false;
   clearIdleCountdown();
+  stopIdleAlert();
   if (idleStartTime) {
     await stopAt(idleStartTime.toISOString());
   } else {
@@ -707,6 +770,10 @@ watch(runningEntry, (val) => {
 // ─── Lifecycle ──────────────────────────────────────────────────
 onMounted(async () => {
   await Promise.all([loadProjects(), checkRunning(), loadEntries()]);
+  // Ask for desktop-notification permission so we can alert from a background tab.
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 });
 
 onUnmounted(() => {

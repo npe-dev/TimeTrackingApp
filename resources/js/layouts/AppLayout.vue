@@ -2,11 +2,8 @@
   <div class="h-screen overflow-auto bg-gradient-to-br from-indigo-500 to-purple-600" :style="backgroundStyle">
     <!-- Navigation -->
     <header class="bg-white/95 backdrop-blur-sm shadow-lg px-6 py-4">
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
-          Time Tracking
-        </h1>
-        <nav class="flex items-center gap-2">
+      <div class="relative flex items-center">
+        <nav class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
           <router-link
             v-for="link in navLinks"
             :key="link.to"
@@ -18,14 +15,16 @@
           >
             {{ link.label }}
           </router-link>
-          <span class="ml-4 text-sm text-gray-500 font-medium">{{ user?.name }}</span>
+        </nav>
+        <div class="ml-auto flex items-center gap-2">
+          <span class="text-sm text-gray-500 font-medium">{{ user?.name }}</span>
           <button
             @click="logout"
             class="text-sm text-gray-400 hover:text-red-500 transition-colors px-2 py-1"
           >
             Logout
           </button>
-        </nav>
+        </div>
       </div>
     </header>
 

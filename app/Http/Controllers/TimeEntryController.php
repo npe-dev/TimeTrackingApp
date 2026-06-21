@@ -10,7 +10,7 @@ class TimeEntryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = TimeEntry::with('project')
+        $query = TimeEntry::with(['project', 'task'])
             ->where('user_id', $request->user()->id)
             ->orderByDesc('start_time');
 
@@ -24,7 +24,7 @@ class TimeEntryController extends Controller
 
     public function running(Request $request)
     {
-        $entry = TimeEntry::with('project')
+        $entry = TimeEntry::with(['project', 'task'])
             ->where('user_id', $request->user()->id)
             ->whereNull('end_time')
             ->orderByDesc('start_time')
@@ -51,7 +51,7 @@ class TimeEntryController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
-        return $this->formatEntry($entry->load('project'));
+        return $this->formatEntry($entry->load(['project', 'task']));
     }
 
     public function stop(Request $request)
@@ -220,6 +220,7 @@ class TimeEntryController extends Controller
         $arr = $entry->toArray();
         $arr['project_name'] = $entry->project?->name;
         $arr['project_color'] = $entry->project?->color;
+        $arr['task_title'] = $entry->task?->title;
         return $arr;
     }
 }

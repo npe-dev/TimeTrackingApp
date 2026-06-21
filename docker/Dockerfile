@@ -21,8 +21,8 @@ RUN apk update && apk add --no-cache \
 RUN docker-php-ext-install pdo pdo_sqlite bcmath gd zip
 
 # Configure PHP upload limits
-RUN echo "upload_max_filesize = 10M" > /usr/local/etc/php/conf.d/uploads.ini && \
-    echo "post_max_size = 12M" >> /usr/local/etc/php/conf.d/uploads.ini && \
+RUN echo "upload_max_filesize = 40M" > /usr/local/etc/php/conf.d/uploads.ini && \
+    echo "post_max_size = 45M" >> /usr/local/etc/php/conf.d/uploads.ini && \
     echo "memory_limit = 256M" >> /usr/local/etc/php/conf.d/uploads.ini
 
 # Configure PHP-FPM to use a socket

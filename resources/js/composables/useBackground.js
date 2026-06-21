@@ -29,10 +29,10 @@ export function useBackground() {
         try {
             const { data } = await axios.get(`/boards/${boardId}/background/status`);
             if (data.exists) {
-                // Strip timestamp — store a stable URL; browser cache handles the image
-                const stableUrl = data.url.split('?')[0];
-                localStorage.setItem(CACHE_KEY + boardId, stableUrl);
-                backgroundUrl.value = stableUrl;
+                // Keep the ?v=<mtime> token: it stays the same while the image is
+                // unchanged (browser cache hit) and changes on re-upload (busts cache).
+                localStorage.setItem(CACHE_KEY + boardId, data.url);
+                backgroundUrl.value = data.url;
             } else {
                 backgroundUrl.value = null;
                 localStorage.removeItem(CACHE_KEY + boardId);
@@ -44,9 +44,8 @@ export function useBackground() {
 
     function setBackground(url) {
         if (url) {
-            const stableUrl = url.split('?')[0];
-            backgroundUrl.value = stableUrl;
-            if (loadedBoardId) localStorage.setItem(CACHE_KEY + loadedBoardId, stableUrl);
+            backgroundUrl.value = url;
+            if (loadedBoardId) localStorage.setItem(CACHE_KEY + loadedBoardId, url);
         } else {
             backgroundUrl.value = null;
             if (loadedBoardId) localStorage.removeItem(CACHE_KEY + loadedBoardId);

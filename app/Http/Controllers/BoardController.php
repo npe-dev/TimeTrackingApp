@@ -46,10 +46,12 @@ class BoardController extends Controller
     public function backgroundStatus(Board $board)
     {
         foreach ($this->extensions as $ext) {
-            if (Storage::disk('public')->exists("backgrounds/board-{$board->id}.{$ext}")) {
+            $path = "backgrounds/board-{$board->id}.{$ext}";
+            if (Storage::disk('public')->exists($path)) {
                 return response()->json([
                     'exists' => true,
-                    'url' => '/storage/backgrounds/board-' . $board->id . '.' . $ext . '?t=' . time(),
+                    // Version by file mtime: stable across loads (cache hit), changes on re-upload.
+                    'url' => '/storage/' . $path . '?v=' . Storage::disk('public')->lastModified($path),
                 ]);
             }
         }
@@ -58,16 +60,17 @@ class BoardController extends Controller
 
     public function uploadBackground(Request $request, Board $board)
     {
-        $request->validate(['background' => 'required|image|max:10240']);
+        $request->validate(['background' => 'required|image|max:40960']);
         $file = $request->file('background');
         $ext = strtolower($file->getClientOriginalExtension()) ?: 'jpg';
         foreach ($this->extensions as $e) {
             Storage::disk('public')->delete("backgrounds/board-{$board->id}.{$e}");
         }
+        $path = "backgrounds/board-{$board->id}.{$ext}";
         $file->storeAs('backgrounds', "board-{$board->id}.{$ext}", 'public');
         return response()->json([
             'success' => true,
-            'url' => '/storage/backgrounds/board-' . $board->id . '.' . $ext . '?t=' . time(),
+            'url' => '/storage/' . $path . '?v=' . Storage::disk('public')->lastModified($path),
         ]);
     }
 

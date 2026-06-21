@@ -39,6 +39,23 @@ services:
     networks:
       - timetracking
 
+  timetracking_scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.local
+    container_name: timetracking_scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    # Wait for the app container to install dependencies (shared volume), then
+    # run the Laravel scheduler, which fires `timers:stop-stale` every minute.
+    command: sh -c "until [ -f vendor/autoload.php ]; do echo 'waiting for dependencies...'; sleep 2; done; php artisan schedule:work"
+    depends_on:
+      - timetracking_app
+    networks:
+      - timetracking
+
 networks:
   timetracking:
     driver: bridge
