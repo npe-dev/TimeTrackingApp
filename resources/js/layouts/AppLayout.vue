@@ -1,18 +1,43 @@
 <template>
   <div class="h-screen overflow-auto bg-gradient-to-br from-indigo-500 to-purple-600" :style="backgroundStyle">
     <!-- Navigation -->
-    <header class="bg-white/95 backdrop-blur-sm shadow-lg px-6 py-4">
+    <header class="relative z-40 bg-white/95 backdrop-blur-sm shadow-lg px-6 py-4">
       <div class="relative flex items-center">
         <!-- Board picker (top-level board switching) -->
         <div class="flex items-center gap-2">
-          <select
-            v-if="boards.length"
-            :value="activeBoardId"
-            @change="onBoardSelect($event)"
-            class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          >
-            <option v-for="b in boards" :key="b.id" :value="b.id">{{ b.name }}</option>
-          </select>
+          <div v-if="boards.length" class="relative">
+            <button
+              @click="boardMenuOpen = !boardMenuOpen"
+              class="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
+            >
+              <span class="max-w-[12rem] truncate">{{ activeBoardName }}</span>
+              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <!-- Backdrop closes the menu on outside click -->
+            <div v-if="boardMenuOpen" class="fixed inset-0 z-40" @click="boardMenuOpen = false"></div>
+
+            <!-- Menu (always opens downward) -->
+            <div
+              v-if="boardMenuOpen"
+              class="absolute left-0 top-full mt-1 z-50 min-w-[14rem] max-h-72 overflow-y-auto rounded-xl bg-white shadow-xl border border-gray-100 py-1"
+            >
+              <button
+                v-for="b in boards"
+                :key="b.id"
+                @click="selectBoard(b.id)"
+                class="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-left hover:bg-indigo-50 transition-colors"
+                :class="b.id === activeBoardId ? 'text-indigo-600 font-medium' : 'text-gray-700'"
+              >
+                <span class="truncate">{{ b.name }}</span>
+                <svg v-if="b.id === activeBoardId" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
           <button
             @click="startCreateBoard"
             class="text-sm text-indigo-500 hover:text-indigo-700 font-medium px-2 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
@@ -60,7 +85,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useAuth } from '@/composables/useAuth';
 import { useBackground } from '@/composables/useBackground';
 import { useBoard } from '@/composables/useBoard';
@@ -69,8 +94,15 @@ const { user, logout } = useAuth();
 const { backgroundUrl } = useBackground();
 const { boards, activeBoardId, loadBoards, setActiveBoard, createBoard } = useBoard();
 
-function onBoardSelect(event) {
-  setActiveBoard(Number(event.target.value));
+const boardMenuOpen = ref(false);
+
+const activeBoardName = computed(
+  () => boards.value.find(b => b.id === activeBoardId.value)?.name || 'Select board'
+);
+
+function selectBoard(id) {
+  setActiveBoard(id);
+  boardMenuOpen.value = false;
 }
 
 async function startCreateBoard() {
