@@ -109,6 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Automations
     Route::get('/automations', [AutomationController::class, 'index']);
     Route::get('/automations/{automation}', [AutomationController::class, 'show']);
+    Route::get('/automations/{automation}/runs', [AutomationController::class, 'runs']);
     Route::post('/automations', [AutomationController::class, 'store']);
     Route::put('/automations/{automation}', [AutomationController::class, 'update']);
     Route::delete('/automations/{automation}', [AutomationController::class, 'destroy']);

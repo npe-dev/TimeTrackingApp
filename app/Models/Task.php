@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Task extends Model
 {
-    protected $fillable = ['column_id', 'project_id', 'parent_task_id', 'title', 'description', 'due_date', 'priority', 'position', 'completed_at'];
+    protected $fillable = ['column_id', 'project_id', 'parent_task_id', 'title', 'description', 'due_date', 'priority', 'position', 'completed_at', 'archived_at'];
 
     protected $casts = [
         'due_date' => 'date',
         'completed_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
 
     public function column()

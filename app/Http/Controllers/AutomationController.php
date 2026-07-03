@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Automation;
@@ -12,12 +13,18 @@ class AutomationController extends Controller
         if ($request->board_id) {
             $query->where('board_id', $request->board_id);
         }
+
         return $query->orderByDesc('created_at')->get()->map(fn ($a) => $this->formatAutomation($a));
     }
 
     public function show(Automation $automation)
     {
         return $this->formatAutomation($automation);
+    }
+
+    public function runs(Automation $automation)
+    {
+        return $automation->runs()->limit(100)->get(['id', 'status', 'message', 'created_at']);
     }
 
     public function store(Request $request)
@@ -57,18 +64,21 @@ class AutomationController extends Controller
             ['type' => $automation->trigger_type],
             $automation->trigger_config ?? []
         );
+
         return $data;
     }
 
     public function destroy(Automation $automation)
     {
         $automation->delete();
+
         return response()->json(['success' => true]);
     }
 
     public function toggle(Automation $automation)
     {
-        $automation->update(['enabled' => !$automation->enabled]);
+        $automation->update(['enabled' => ! $automation->enabled]);
+
         return response()->json(['success' => true, 'enabled' => $automation->enabled]);
     }
 }

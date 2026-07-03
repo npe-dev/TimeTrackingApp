@@ -1,8 +1,9 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\Task;
 use App\Models\Column;
+use App\Models\Task;
 use App\Services\AutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,15 +12,24 @@ class TaskController extends Controller
 {
     public function index($columnId)
     {
-        $tasks = Task::with(['labels.globalLabel', 'checklistItems', 'subtasks.labels.globalLabel', 'subtasks.checklistItems', 'subtasks.project'])
+        $tasks = Task::with([
+            'labels.globalLabel',
+            'checklistItems',
+            'subtasks' => fn ($q) => $q->whereNull('archived_at'),
+            'subtasks.labels.globalLabel',
+            'subtasks.checklistItems',
+            'subtasks.project',
+        ])
             ->where('column_id', $columnId)
             ->whereNull('parent_task_id')
+            ->whereNull('archived_at')
             ->orderBy('position')
             ->get();
 
         return $tasks->map(function ($task) {
             $arr = $this->formatTaskForList($task);
             $arr['subtasks'] = $task->subtasks->map(fn ($st) => $this->formatTaskForList($st))->values();
+
             return $arr;
         });
     }
@@ -44,6 +54,7 @@ class TaskController extends Controller
         $arr['project_color'] = $task->project?->color;
         $arr['checklist_total'] = $task->checklistItems->count();
         $arr['checklist_done'] = $task->checklistItems->where('completed', true)->count();
+
         return $arr;
     }
 
@@ -51,7 +62,7 @@ class TaskController extends Controller
     {
         $task->load(['labels.globalLabel', 'checklistItems', 'links', 'project', 'subtasks']);
 
-        $labels = $task->labels->map(fn($tl) => [
+        $labels = $task->labels->map(fn ($tl) => [
             'id' => $tl->id,
             'task_id' => $tl->task_id,
             'label' => $tl->globalLabel ? $tl->globalLabel->name : $tl->label,
@@ -66,6 +77,7 @@ class TaskController extends Controller
         $result['links'] = $task->links;
         $result['project_name'] = $task->project?->name;
         $result['project_color'] = $task->project?->color;
+
         return $result;
     }
 
@@ -195,6 +207,7 @@ class TaskController extends Controller
                 }
             }
         });
+
         return response()->json(['success' => true, 'message' => 'Positions normalized']);
     }
 
@@ -206,7 +219,7 @@ class TaskController extends Controller
         ]);
 
         // Fire the "card done" automation only when transitioning into the done state.
-        if (!$wasCompleted) {
+        if (! $wasCompleted) {
             AutomationService::run('task_completed', [
                 'task_id' => $task->id,
                 'column_id' => $task->column_id,
@@ -222,6 +235,7 @@ class TaskController extends Controller
         foreach ($ids as $position => $id) {
             Task::where('id', $id)->where('parent_task_id', $task->id)->update(['position' => $position]);
         }
+
         return response()->json(['success' => true]);
     }
 
@@ -229,6 +243,7 @@ class TaskController extends Controller
     {
         AutomationService::run('task_deleted', ['task_id' => $task->id, 'column_id' => $task->column_id]);
         $task->delete();
+
         return response()->json(['success' => true]);
     }
 }

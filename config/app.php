@@ -69,6 +69,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | User Display Timezone
+    |--------------------------------------------------------------------------
+    |
+    | All timestamps are persisted in UTC (see 'timezone' above). This is the
+    | single-user's local timezone, used to (a) evaluate scheduled automations
+    | ("every day at 9" means 9am here) and (b) convert timestamps for display.
+    |
+    */
+
+    'user_timezone' => env('USER_TIMEZONE', 'Europe/Sofia'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |
