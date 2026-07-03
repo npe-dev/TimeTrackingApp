@@ -1,8 +1,9 @@
 services:
   timetracking_app:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
+    # Prebuilt image pulled from GHCR (built in CI, never built on the VPS).
+    # IMAGE_TAG is set by the deploy workflow to the commit SHA for immutable,
+    # rollback-able deploys; falls back to :latest for manual `docker compose` use.
+    image: ghcr.io/npe-dev/timetrackingapp:${IMAGE_TAG:-latest}
     container_name: timetracking_app
     restart: unless-stopped
     extra_hosts:
@@ -16,6 +17,14 @@ services:
       - nginx_default
     expose:
       - 80
+    healthcheck:
+      # Laravel's built-in health endpoint (bootstrap/app.php -> health: '/up').
+      # Lets `docker compose up -d --wait` block until the new container serves.
+      test: ["CMD", "curl", "-fsS", "http://localhost:80/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 networks:
   nginx_default:

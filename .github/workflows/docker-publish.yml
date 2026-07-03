@@ -4,18 +4,69 @@ on:
   push:
     branches: [ "master" ]
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment: production
+env:
+  IMAGE: ghcr.io/npe-dev/timetrackingapp
 
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1) Build the image ON GitHub's runners (not the VPS) and push it to GHCR.
+  #    This is what removes build pressure from production: the VPS never runs
+  #    composer/npm again — it only pulls a finished image.
+  # ---------------------------------------------------------------------------
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          # Tag both :latest (for manual use) and the commit SHA (immutable,
+          # used by the deploy job so a rollback is just re-pinning IMAGE_TAG).
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          # Layer cache in the GitHub Actions cache -> fast incremental builds.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  # 2) Deploy on the VPS: pull the prebuilt image and recreate containers.
+  #    No `down` up front -> the old container keeps serving while the new
+  #    image downloads; the swap is a few-second recreate, and `--wait` blocks
+  #    until the new app container reports healthy (/up).
+  # ---------------------------------------------------------------------------
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v0.1.10
         env:
+          IMAGE_TAG: ${{ github.sha }}
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APP_KEY: ${{ secrets.APP_KEY }}
           APP_URL: ${{ vars.APP_URL }}
           SESSION_DOMAIN: ${{ vars.SESSION_DOMAIN }}
@@ -24,9 +75,11 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: APP_KEY,APP_URL,SESSION_DOMAIN,SANCTUM_STATEFUL_DOMAINS
+          envs: IMAGE_TAG,REGISTRY_USER,REGISTRY_TOKEN,APP_KEY,APP_URL,SESSION_DOMAIN,SANCTUM_STATEFUL_DOMAINS
           script: |
             set -e
+
+            export IMAGE=ghcr.io/npe-dev/timetrackingapp
 
             echo "→ Navigating to app directory"
             cd /srv/Projects/TimeTrackingApp
@@ -34,7 +87,7 @@ jobs:
             echo "→ Fixing file permissions before pull"
             sudo chown -R $USER:$USER .
 
-            echo "→ Pulling latest code"
+            echo "→ Pulling latest code (compose file, .env template)"
             git fetch --all
             git reset --hard origin/master
 
@@ -56,13 +109,20 @@ jobs:
               exit 1
             fi
 
-            echo "→ Building Docker containers"
-            docker compose -f docker-compose.prod.yaml down
-            docker compose -f docker-compose.prod.yaml up -d --build
+            echo "→ Logging in to GHCR"
+            echo "${REGISTRY_TOKEN}" | docker login ghcr.io -u "${REGISTRY_USER}" --password-stdin
+
+            echo "→ Pulling prebuilt image ${IMAGE}:${IMAGE_TAG}"
+            IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml pull
+
+            echo "→ Recreating containers (old container serves until new one is healthy)"
+            IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml up -d --wait --remove-orphans
 
             echo "→ Running migrations"
             docker exec -i timetracking_app php artisan migrate --force
 
+            echo "→ Cleaning up old images"
+            docker logout ghcr.io
             docker image prune -f
 
             echo "✅ Deployment complete"
