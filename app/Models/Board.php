@@ -6,7 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Board extends Model
 {
-    protected $fillable = ['name', 'description'];
+    protected $fillable = ['name', 'description', 'report_enabled'];
+
+    protected $casts = [
+        'report_enabled' => 'boolean',
+    ];
 
     public function columns()
     {
