@@ -71,11 +71,13 @@ jobs:
           APP_URL: ${{ vars.APP_URL }}
           SESSION_DOMAIN: ${{ vars.SESSION_DOMAIN }}
           SANCTUM_STATEFUL_DOMAINS: ${{ vars.SANCTUM_STATEFUL_DOMAINS }}
+          MAILER_KEY: ${{ secrets.MAILER_KEY }}
+          MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: IMAGE_TAG,REGISTRY_USER,REGISTRY_TOKEN,APP_KEY,APP_URL,SESSION_DOMAIN,SANCTUM_STATEFUL_DOMAINS
+          envs: IMAGE_TAG,REGISTRY_USER,REGISTRY_TOKEN,APP_KEY,APP_URL,SESSION_DOMAIN,SANCTUM_STATEFUL_DOMAINS,MAILER_KEY,MAIL_FROM_ADDRESS
           script: |
             set -e
 
@@ -102,6 +104,17 @@ jobs:
             sed -i "s|LOG_LEVEL=debug|LOG_LEVEL=error|g" .env
             sed -i "s|SESSION_DOMAIN=null|SESSION_DOMAIN=${SESSION_DOMAIN}|g" .env
             sed -i "s|SANCTUM_STATEFUL_DOMAINS=|SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS}|g" .env
+
+            echo "→ Configuring MailerSend transport for the email report"
+            sed -i "s|MAIL_MAILER=log|MAIL_MAILER=mailersend|g" .env
+            sed -i "s|MAILERSEND_API_KEY=|MAILERSEND_API_KEY=${MAILER_KEY}|g" .env
+            # Optional: override the From address (must be a MailerSend-verified domain).
+            if [ -n "${MAIL_FROM_ADDRESS}" ]; then
+              sed -i "s|MAIL_FROM_ADDRESS=.*|MAIL_FROM_ADDRESS=\"${MAIL_FROM_ADDRESS}\"|g" .env
+            fi
+
+            echo "→ Verifying the MailerSend key was set"
+            grep -q '^MAILERSEND_API_KEY=.\+' .env || { echo "❌ ERROR: MAILERSEND_API_KEY is empty (check the 'MAILER_KEY' secret)"; exit 1; }
 
             echo "→ Verifying .env was created"
             if [ ! -f .env ]; then

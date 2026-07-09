@@ -11,6 +11,7 @@ use App\Http\Controllers\ChecklistItemController;
 use App\Http\Controllers\TaskLinkController;
 use App\Http\Controllers\TimeEntryController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReportSettingController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TokenController;
@@ -103,8 +104,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tasks/{taskId}/time-entries', [TimeEntryController::class, 'taskEntries']);
     Route::post('/tasks/{taskId}/start-timer', [TimeEntryController::class, 'taskStart']);
 
-    // Reports
+    // Reports (Reports page data)
     Route::get('/reports/summary', [ReportController::class, 'summary']);
+
+    // Scheduled email report settings
+    Route::get('/reports/settings', [ReportSettingController::class, 'show']);
+    Route::put('/reports/settings', [ReportSettingController::class, 'update']);
+    Route::get('/reports/preview/{board}', [ReportSettingController::class, 'preview']);
+    Route::post('/reports/send-now/{board}', [ReportSettingController::class, 'sendNow']);
+    Route::patch('/boards/{board}/report-toggle', [ReportSettingController::class, 'toggleBoard']);
 
     // Automations
     Route::get('/automations', [AutomationController::class, 'index']);

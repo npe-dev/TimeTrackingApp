@@ -207,6 +207,94 @@
         <p v-else class="text-sm text-gray-400">No labels yet. Add one to get started.</p>
       </div>
 
+      <!-- Email Reports (global) -->
+      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-lg font-semibold text-gray-800">Email reports</h3>
+          <label class="inline-flex items-center cursor-pointer">
+            <input type="checkbox" v-model="reportSettings.enabled" class="sr-only peer" />
+            <div class="relative w-11 h-6 bg-gray-200 peer-checked:bg-indigo-500 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+          </label>
+        </div>
+        <p class="text-sm text-gray-400 mb-4">Get a scheduled email summary for each enabled board.</p>
+
+        <div class="space-y-5" :class="{ 'opacity-50 pointer-events-none': !reportSettings.enabled }">
+          <!-- Schedule -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-600 mb-1">Frequency</label>
+              <select v-model="reportSettings.frequency" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none">
+                <option value="daily">Every day</option>
+                <option value="weekdays">Weekdays only</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+            <div v-if="reportSettings.frequency === 'weekly'">
+              <label class="block text-sm font-medium text-gray-600 mb-1">Day</label>
+              <select v-model.number="reportSettings.day_of_week" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none">
+                <option v-for="d in weekdayOptions" :key="d.value" :value="d.value">{{ d.label }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-600 mb-1">Time</label>
+              <input v-model="reportSettings.time" type="time" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none" />
+            </div>
+          </div>
+
+          <!-- Recipient -->
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1">Send to</label>
+            <input v-model="reportSettings.recipient_email" type="email" :placeholder="accountEmail || 'you@example.com'" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none" />
+            <p class="text-[11px] text-gray-400 mt-1">Leave blank to use your account email ({{ accountEmail || '—' }}).</p>
+          </div>
+
+          <!-- Sections -->
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-2">Include in the report</label>
+            <div class="space-y-2">
+              <label v-for="s in availableSections" :key="s.key" class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" :checked="reportSettings.sections.includes(s.key)" @change="toggleSection(s.key)" class="rounded border-gray-300 text-indigo-500 focus:ring-indigo-400" />
+                {{ s.label }}
+              </label>
+            </div>
+          </div>
+
+          <!-- Per-board opt-in -->
+          <div v-if="reportBoards.length">
+            <label class="block text-sm font-medium text-gray-600 mb-2">Boards</label>
+            <div class="space-y-2">
+              <div v-for="b in reportBoards" :key="b.id" class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-50">
+                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer min-w-0">
+                  <input type="checkbox" :checked="b.report_enabled" @change="toggleReportBoard(b)" class="rounded border-gray-300 text-indigo-500 focus:ring-indigo-400" />
+                  <span class="truncate font-medium">{{ b.name }}</span>
+                  <span v-if="b.last_run" class="text-[11px] shrink-0" :class="b.last_run.status === 'sent' ? 'text-green-500' : b.last_run.status === 'failed' ? 'text-red-500' : 'text-gray-400'">
+                    · {{ b.last_run.status }}
+                  </span>
+                </label>
+                <button
+                  @click="sendReportTest(b)"
+                  :disabled="testingBoardId === b.id"
+                  class="px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition disabled:opacity-50 shrink-0 ml-2"
+                >
+                  {{ testingBoardId === b.id ? 'Sending…' : 'Send test' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 mt-5">
+          <button
+            @click="saveReportSettings"
+            class="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all"
+          >
+            Save
+          </button>
+          <span v-if="reportSaved" class="text-xs text-green-600">Saved</span>
+          <span v-if="testMessage" class="text-xs" :class="testOk ? 'text-green-600' : 'text-red-500'">{{ testMessage }}</span>
+        </div>
+      </div>
+
       <!-- Label Edit Modal -->
       <Teleport to="body">
         <div v-if="showLabelModal" class="fixed inset-0 z-50 flex items-center justify-center">
@@ -450,6 +538,100 @@ async function reorderLabel(index, direction) {
   }
 }
 
+// ─── Email reports (global) ────────────────────────────────────────
+const reportSettings = reactive({
+  enabled: false,
+  frequency: 'daily',
+  day_of_week: 1,
+  time: '09:00',
+  sections: ['critical', 'columns', 'time', 'completed'],
+  recipient_email: '',
+});
+const reportBoards = ref([]);
+const availableSections = ref([]);
+const accountEmail = ref('');
+const reportSaved = ref(false);
+const testingBoardId = ref(null);
+const testMessage = ref('');
+const testOk = ref(false);
+const weekdayOptions = [
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+  { value: 7, label: 'Sunday' },
+];
+
+async function loadReportSettings() {
+  try {
+    const data = await api.get('/reports/settings');
+    Object.assign(reportSettings, {
+      enabled: data.settings.enabled,
+      frequency: data.settings.frequency,
+      day_of_week: data.settings.day_of_week || 1,
+      time: (data.settings.time || '09:00').slice(0, 5),
+      sections: Array.isArray(data.settings.sections) ? data.settings.sections : [],
+      recipient_email: data.settings.recipient_email || '',
+    });
+    reportBoards.value = data.boards || [];
+    availableSections.value = data.available_sections || [];
+    accountEmail.value = data.account_email || '';
+  } catch (e) {
+    console.error('Failed to load report settings', e);
+  }
+}
+
+function toggleSection(key) {
+  const i = reportSettings.sections.indexOf(key);
+  if (i === -1) reportSettings.sections.push(key);
+  else reportSettings.sections.splice(i, 1);
+}
+
+async function saveReportSettings() {
+  try {
+    await api.put('/reports/settings', {
+      enabled: reportSettings.enabled,
+      frequency: reportSettings.frequency,
+      day_of_week: reportSettings.frequency === 'weekly' ? reportSettings.day_of_week : null,
+      time: reportSettings.time,
+      sections: reportSettings.sections,
+      recipient_email: reportSettings.recipient_email.trim() || null,
+    });
+    reportSaved.value = true;
+    setTimeout(() => { reportSaved.value = false; }, 1500);
+  } catch (e) {
+    console.error('Failed to save report settings', e);
+  }
+}
+
+async function toggleReportBoard(board) {
+  try {
+    const data = await api.patch(`/boards/${board.id}/report-toggle`);
+    board.report_enabled = data.report_enabled;
+  } catch (e) {
+    console.error('Failed to toggle board report', e);
+  }
+}
+
+async function sendReportTest(board) {
+  testingBoardId.value = board.id;
+  testMessage.value = '';
+  try {
+    const data = await api.post(`/reports/send-now/${board.id}`);
+    testOk.value = data.success;
+    testMessage.value = `${board.name}: ${data.message}`;
+  } catch (e) {
+    testOk.value = false;
+    testMessage.value = `${board.name}: failed to send.`;
+    console.error('Failed to send test report', e);
+  } finally {
+    testingBoardId.value = null;
+    setTimeout(() => { testMessage.value = ''; }, 5000);
+  }
+}
+
 // ─── Lifecycle ─────────────────────────────────────────────────────
 function refreshForBoard() {
   seedBoardForm();
@@ -463,5 +645,8 @@ watch(activeBoardId, refreshForBoard);
 // page mounts — reseed the form once it arrives.
 watch(boards, seedBoardForm, { deep: true });
 
-onMounted(refreshForBoard);
+onMounted(() => {
+  refreshForBoard();
+  loadReportSettings();
+});
 </script>

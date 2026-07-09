@@ -26,6 +26,31 @@ services:
       retries: 3
       start_period: 30s
 
+  timetracking_scheduler:
+    # Runs Laravel's scheduler so cron-driven work fires in production:
+    # stale-timer cleanup, scheduled automations, and the daily email report.
+    # Same image as the app, sharing the SQLite DB + storage volumes.
+    image: ghcr.io/npe-dev/timetrackingapp:${IMAGE_TAG:-latest}
+    container_name: timetracking_scheduler
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    working_dir: /var/www/html
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./database:/var/www/html/database
+      - ./.env:/var/www/html/.env:ro
+    networks:
+      - nginx_default
+    command: php artisan schedule:work
+    depends_on:
+      - timetracking_app
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "schedule:work"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
 networks:
   nginx_default:
     external: true
