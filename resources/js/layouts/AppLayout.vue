@@ -116,8 +116,8 @@ onMounted(() => {
 });
 
 const navLinks = [
-  { to: '/', label: 'Timer' },
   { to: '/tasks', label: 'Tasks' },
+  { to: '/', label: 'Timer' },
   { to: '/reports', label: 'Reports' },
   { to: '/settings', label: 'Settings' },
   { to: '/automations', label: 'Automation' },
