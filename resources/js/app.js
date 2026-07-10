@@ -25,6 +25,12 @@ const routes = [
     },
     {
         path: '/',
+        name: 'home',
+        component: () => import('./pages/Landing.vue'),
+        meta: { guest: true },
+    },
+    {
+        path: '/timer',
         name: 'timer',
         component: () => import('./pages/Timer.vue'),
         meta: { auth: true },
