@@ -13,6 +13,7 @@ class TaskController extends Controller
     public function index($columnId)
     {
         $tasks = Task::with([
+            'project',
             'labels.globalLabel',
             'checklistItems',
             'subtasks' => fn ($q) => $q->whereNull('archived_at'),

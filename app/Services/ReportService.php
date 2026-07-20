@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendBoardReportJob;
 use App\Mail\BoardReportMail;
 use App\Models\Board;
 use App\Models\ReportRun;
@@ -104,6 +105,26 @@ class ReportService
             return false;
         }
 
+        // Scheduled runs push the SMTP send onto the queue so it never blocks the
+        // scheduler (or the SQLite DB) while talking to the mail server. A forced
+        // "send now" from the UI stays synchronous so the user gets an immediate
+        // sent/failed result.
+        if (! $force) {
+            SendBoardReportJob::dispatch($board->id, $report, $recipient);
+
+            return true;
+        }
+
+        return static::deliver($board, $report, $recipient);
+    }
+
+    /**
+     * Deliver a pre-built board report over SMTP and record the outcome.
+     * Called synchronously for forced sends and from SendBoardReportJob for
+     * scheduled sends.
+     */
+    public static function deliver(Board $board, array $report, string $recipient): bool
+    {
         try {
             Mail::to($recipient)->send(new BoardReportMail($report, $recipient));
             static::record($board, 'sent', "Report sent to {$recipient}.");

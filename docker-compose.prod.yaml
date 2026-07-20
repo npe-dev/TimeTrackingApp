@@ -51,6 +51,31 @@ services:
       timeout: 10s
       retries: 3
 
+  timetracking_queue:
+    # Processes the database queue (QUEUE_CONNECTION=database) so slow work —
+    # notably the per-board report SMTP send — runs here instead of blocking the
+    # scheduler or holding the SQLite DB. Same image + shared volumes.
+    image: ghcr.io/npe-dev/timetrackingapp:${IMAGE_TAG:-latest}
+    container_name: timetracking_queue
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    working_dir: /var/www/html
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./database:/var/www/html/database
+      - ./.env:/var/www/html/.env:ro
+    networks:
+      - nginx_default
+    command: php artisan queue:work --tries=3 --sleep=3 --max-time=3600
+    depends_on:
+      - timetracking_app
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "queue:work"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
 networks:
   nginx_default:
     external: true

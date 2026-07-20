@@ -56,6 +56,23 @@ services:
     networks:
       - timetracking
 
+  timetracking_queue:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.local
+    container_name: timetracking_queue
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    # Wait for dependencies (shared volume), then process the database queue so
+    # queued jobs (e.g. the per-board report email) run outside web requests.
+    command: sh -c "until [ -f vendor/autoload.php ]; do echo 'waiting for dependencies...'; sleep 2; done; php artisan queue:work --tries=3 --sleep=3"
+    depends_on:
+      - timetracking_app
+    networks:
+      - timetracking
+
 networks:
   timetracking:
     driver: bridge
