@@ -3,6 +3,17 @@ set -e
 
 echo "Setting up permissions..."
 
+# Ensure the framework storage subdirs exist. The prod compose mounts ./storage
+# from the host, which shadows the image's storage dir; git does not track empty
+# dirs, so framework/{views,cache,sessions} can be missing on a fresh volume.
+# Without them Blade compilation (incl. the /up healthcheck view) fails, the
+# container never reports healthy, and the deploy aborts.
+mkdir -p \
+    /var/www/html/storage/framework/cache/data \
+    /var/www/html/storage/framework/sessions \
+    /var/www/html/storage/framework/views \
+    /var/www/html/storage/logs
+
 # Ensure storage and bootstrap/cache are writable
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
