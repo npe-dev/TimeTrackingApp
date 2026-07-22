@@ -14,24 +14,26 @@ mkdir -p \
     /var/www/html/storage/framework/views \
     /var/www/html/storage/logs
 
-# Ensure storage and bootstrap/cache are writable
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-
-# Ensure database directory and file are writable
-chown -R www-data:www-data /var/www/html/database
-chmod -R 775 /var/www/html/database
-
-# Create SQLite database if it doesn't exist
-if [ -f /var/www/html/database/database.sqlite ]; then
-    chmod 666 /var/www/html/database/database.sqlite
-    chown www-data:www-data /var/www/html/database/database.sqlite
-    echo "Database file permissions set"
-else
+# Create the SQLite database file if missing (cheap — a single file). Every
+# container needs it to exist, so this runs unconditionally.
+if [ ! -f /var/www/html/database/database.sqlite ]; then
     touch /var/www/html/database/database.sqlite
-    chmod 666 /var/www/html/database/database.sqlite
-    chown www-data:www-data /var/www/html/database/database.sqlite
-    echo "Created database file with correct permissions"
+    echo "Created database file"
+fi
+
+# Recursively fixing ownership/permissions on the shared ./storage + ./database
+# bind-mounts is expensive. The app, scheduler and queue containers all boot from
+# this image and mount the SAME volumes, so running `chown -R` in each just pins
+# the CPU with concurrent recursive chowns over one volume. Only the primary
+# container does it (FIX_PERMISSIONS defaults to true so standalone use still
+# works); the scheduler/queue set FIX_PERMISSIONS=false and share the result.
+if [ "${FIX_PERMISSIONS:-true}" = "true" ]; then
+    echo "Fixing permissions on storage, bootstrap/cache and database..."
+    chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+    chmod 664 /var/www/html/database/database.sqlite
+else
+    echo "FIX_PERMISSIONS=false — skipping recursive chown (shared volume handled by the primary container)"
 fi
 
 # Install composer dependencies if vendor/ is missing (dev mode)

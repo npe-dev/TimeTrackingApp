@@ -86,8 +86,14 @@ jobs:
             echo "→ Navigating to app directory"
             cd /srv/Projects/TimeTrackingApp
 
-            echo "→ Fixing file permissions before pull"
-            sudo chown -R $USER:$USER .
+            echo "→ Fixing ownership so git can update tracked files"
+            # Only tracked files + .git need to be owned by the deploy user for
+            # `git reset --hard` to work. storage/ and database/ are gitignored,
+            # container-owned (www-data), and the largest trees on the box (SQLite
+            # DB + WAL, logs, cache) — recursively chowning them every deploy was
+            # pinning the CPU/IO for no benefit, so prune them from the chown.
+            sudo find . \( -path ./storage -o -path ./database \) -prune -o \
+              -exec chown "$USER:$USER" {} +
 
             echo "→ Pulling latest code (compose file, .env template)"
             git fetch --all
