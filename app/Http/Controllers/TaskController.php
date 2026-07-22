@@ -25,6 +25,7 @@ class TaskController extends Controller
             ->whereNull('parent_task_id')
             ->whereNull('archived_at')
             ->orderBy('position')
+            ->orderBy('id')
             ->get();
 
         return $tasks->map(function ($task) {
@@ -84,15 +85,29 @@ class TaskController extends Controller
 
     public function store(Request $request)
     {
+        $columnId = $request->column_id;
+        $parentTaskId = $request->parent_task_id;
+
+        // Always append new cards to the bottom. The client can't reliably compute
+        // the bottom position from its visible list: archived tasks keep their
+        // position but are hidden, so gaps make a count-based position collide with
+        // an existing card and land mid-column. Derive it authoritatively from the
+        // max position among siblings (same column + same parent scope) instead.
+        $siblings = Task::where('column_id', $columnId);
+        $parentTaskId === null
+            ? $siblings->whereNull('parent_task_id')
+            : $siblings->where('parent_task_id', $parentTaskId);
+        $position = ($siblings->max('position') ?? -1) + 1;
+
         $task = Task::create([
-            'column_id' => $request->column_id,
+            'column_id' => $columnId,
             'project_id' => $request->project_id,
-            'parent_task_id' => $request->parent_task_id,
+            'parent_task_id' => $parentTaskId,
             'title' => $request->title,
             'description' => $request->description ?? '',
             'due_date' => $request->due_date,
             'priority' => $request->priority ?? 'none',
-            'position' => $request->position ?? 0,
+            'position' => $position,
         ]);
 
         $task->load('project');
