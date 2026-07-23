@@ -83,6 +83,11 @@ jobs:
 
             export IMAGE=ghcr.io/npe-dev/timetrackingapp
 
+            # Diagnostic: confirm the secret actually arrived on the VPS without
+            # leaking it. Prints only the length + a masked head, so a mismatch
+            # (0 = secret empty/not passed) is visible in the deploy log.
+            echo "→ APP_KEY sanity: length=${#APP_KEY}, head=$(printf '%s' "$APP_KEY" | cut -c1-7)…"
+
             echo "→ Navigating to app directory"
             cd /srv/Projects/TimeTrackingApp
 
