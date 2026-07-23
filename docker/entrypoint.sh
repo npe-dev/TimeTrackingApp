@@ -29,7 +29,12 @@ fi
 # works); the scheduler/queue set FIX_PERMISSIONS=false and share the result.
 if [ "${FIX_PERMISSIONS:-true}" = "true" ]; then
     echo "Fixing permissions on storage, bootstrap/cache and database..."
-    chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+    # storage/ is a host bind-mount containing git-tracked .gitignore placeholders.
+    # Chowning those to www-data breaks the deploy user's `git reset --hard`
+    # ("unable to unlink"), so we chown everything EXCEPT the tracked .gitignore
+    # files — the app only needs to own the directories to write logs/cache/uploads.
+    find /var/www/html/storage \! -name .gitignore -exec chown www-data:www-data {} +
+    chown -R www-data:www-data /var/www/html/bootstrap/cache
     chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
     chmod 664 /var/www/html/database/database.sqlite
 else

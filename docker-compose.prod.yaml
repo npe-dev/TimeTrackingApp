@@ -11,7 +11,11 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./storage:/var/www/html/storage
-      - ./database:/var/www/html/database
+      # Mount only the SQLite data file, not the whole database/ dir. Migrations
+      # and seeders ship inside the image; bind-mounting the dir would expose
+      # git-tracked files to the container's recursive chown, which then breaks
+      # the deploy user's `git reset --hard` with "unable to unlink" errors.
+      - ./database/database.sqlite:/var/www/html/database/database.sqlite
       - ./.env:/var/www/html/.env:ro
     networks:
       - nginx_default
@@ -38,7 +42,9 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./storage:/var/www/html/storage
-      - ./database:/var/www/html/database
+      # Only the SQLite data file — see the app service for why the whole
+      # database/ dir is not mounted.
+      - ./database/database.sqlite:/var/www/html/database/database.sqlite
       - ./.env:/var/www/html/.env:ro
     networks:
       - nginx_default
@@ -70,7 +76,9 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./storage:/var/www/html/storage
-      - ./database:/var/www/html/database
+      # Only the SQLite data file — see the app service for why the whole
+      # database/ dir is not mounted.
+      - ./database/database.sqlite:/var/www/html/database/database.sqlite
       - ./.env:/var/www/html/.env:ro
     networks:
       - nginx_default
