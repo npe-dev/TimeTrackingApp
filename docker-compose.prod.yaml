@@ -11,11 +11,10 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./storage:/var/www/html/storage
-      # Mount only the SQLite data file, not the whole database/ dir. Migrations
-      # and seeders ship inside the image; bind-mounting the dir would expose
-      # git-tracked files to the container's recursive chown, which then breaks
-      # the deploy user's `git reset --hard` with "unable to unlink" errors.
-      - ./database/database.sqlite:/var/www/html/database/database.sqlite
+      # Mount the whole database/ dir so SQLite's WAL sidecars (-wal/-shm) live
+      # on the shared host volume — every container (app, scheduler, queue) must
+      # share the SAME WAL files or reads go stale and the DB can corrupt.
+      - ./database:/var/www/html/database
       - ./.env:/var/www/html/.env:ro
     networks:
       - nginx_default
@@ -42,9 +41,8 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./storage:/var/www/html/storage
-      # Only the SQLite data file — see the app service for why the whole
-      # database/ dir is not mounted.
-      - ./database/database.sqlite:/var/www/html/database/database.sqlite
+      # Full database/ dir — see the app service for why (shared SQLite WAL files).
+      - ./database:/var/www/html/database
       - ./.env:/var/www/html/.env:ro
     networks:
       - nginx_default
@@ -76,9 +74,8 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./storage:/var/www/html/storage
-      # Only the SQLite data file — see the app service for why the whole
-      # database/ dir is not mounted.
-      - ./database/database.sqlite:/var/www/html/database/database.sqlite
+      # Full database/ dir — see the app service for why (shared SQLite WAL files).
+      - ./database:/var/www/html/database
       - ./.env:/var/www/html/.env:ro
     networks:
       - nginx_default
