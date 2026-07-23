@@ -87,13 +87,17 @@ jobs:
             cd /srv/Projects/TimeTrackingApp
 
             echo "→ Fixing ownership so git can update tracked files"
-            # Only tracked files + .git need to be owned by the deploy user for
-            # `git reset --hard` to work. storage/ and database/ are gitignored,
-            # container-owned (www-data), and the largest trees on the box (SQLite
-            # DB + WAL, logs, cache) — recursively chowning them every deploy was
-            # pinning the CPU/IO for no benefit, so prune them from the chown.
-            sudo find . \( -path ./storage -o -path ./database \) -prune -o \
-              -exec chown "$USER:$USER" {} +
+            # `git reset --hard` must be able to unlink and rewrite every tracked
+            # file — which requires the deploy user to OWN the containing dirs.
+            # storage/ and database/ hold tracked files (the .gitignore markers and
+            # all migrations/seeders/factories) but are chowned to www-data by the
+            # container entrypoint, so a previous attempt to prune them from this
+            # chown left git unable to unlink them → the reset aborted.
+            #
+            # Chown the whole checkout back to the deploy user. The container's
+            # entrypoint re-chowns storage/ + the SQLite file to www-data on boot,
+            # so this ownership only needs to survive until `git reset` below.
+            sudo chown -R "$USER:$USER" .
 
             echo "→ Pulling latest code (compose file, .env template)"
             git fetch --all
