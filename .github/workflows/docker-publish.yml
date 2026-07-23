@@ -123,6 +123,11 @@ jobs:
               sed -i "s|MAIL_FROM_ADDRESS=.*|MAIL_FROM_ADDRESS=\"${MAIL_FROM_ADDRESS}\"|g" .env
             fi
 
+            echo "→ Verifying the app key was set"
+            # An empty APP_KEY ships a site that 500s on every request ("No
+            # application encryption key has been specified"), so fail loudly here.
+            grep -q '^APP_KEY=base64:.\+' .env || { echo "❌ ERROR: APP_KEY is empty or malformed (check the 'APP_KEY' secret — must be a 'base64:...' value from 'php artisan key:generate --show')"; exit 1; }
+
             echo "→ Verifying the MailerSend key was set"
             grep -q '^MAILERSEND_API_KEY=.\+' .env || { echo "❌ ERROR: MAILERSEND_API_KEY is empty (check the 'MAILER_KEY' secret)"; exit 1; }
 
@@ -140,6 +145,17 @@ jobs:
 
             echo "→ Recreating containers (old container serves until new one is healthy)"
             IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml up -d --wait --remove-orphans
+
+            echo "→ Reclaiming storage/database ownership for the app user"
+            # The 'Fixing ownership' step above chowns the whole checkout to the
+            # deploy user so git reset works — including storage/ and database/,
+            # which the app (www-data) must write. The container entrypoint fixes
+            # this on boot, but only when the container is actually recreated; a
+            # no-op `up` (unchanged image) skips it and leaves storage owned by the
+            # deploy user → "laravel.log ... Permission denied". Re-assert it here,
+            # unconditionally, every deploy.
+            docker exec -i timetracking_app chown -R www-data:www-data \
+              /var/www/html/storage /var/www/html/database
 
             echo "→ Running migrations"
             docker exec -i timetracking_app php artisan migrate --force
