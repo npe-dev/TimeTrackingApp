@@ -543,11 +543,32 @@ function editEntry(entry) {
 }
 
 async function saveManualEntry() {
+  // Guard against empty/invalid dates: new Date('').toISOString() throws a
+  // RangeError, which would otherwise abort the save silently.
+  const start = new Date(manualForm.start_time);
+  if (isNaN(start.getTime())) {
+    alert('Please enter a valid start time.');
+    return;
+  }
+  let end = null;
+  if (manualForm.end_time) {
+    end = new Date(manualForm.end_time);
+    if (isNaN(end.getTime())) {
+      alert('Please enter a valid end time.');
+      return;
+    }
+    if (end < start) {
+      alert('End time cannot be before start time.');
+      return;
+    }
+  }
+
   const payload = {
     project_id: manualForm.project_id,
     description: manualForm.description,
-    start_time: new Date(manualForm.start_time).toISOString(),
-    end_time: new Date(manualForm.end_time).toISOString(),
+    start_time: start.toISOString(),
+    // A running entry has no end time; keep it null so the timer stays running.
+    end_time: end ? end.toISOString() : null,
   };
   if (manualForm.id) {
     await api.put(`/entries/${manualForm.id}`, payload);
@@ -555,7 +576,9 @@ async function saveManualEntry() {
     await api.post('/entries', payload);
   }
   showManualModal.value = false;
-  await loadEntries();
+  // Refresh both the list and the live running timer, in case the running
+  // entry's start time was just edited.
+  await Promise.all([loadEntries(), checkRunning()]);
 }
 
 // ─── Delete Confirmation ────────────────────────────────────────

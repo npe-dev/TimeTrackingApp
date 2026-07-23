@@ -14,6 +14,9 @@ class TimeEntryController extends Controller
     {
         $query = TimeEntry::with(['project', 'task'])
             ->where('user_id', $request->user()->id)
+            // Exclude the currently-running (open) timer; it is shown separately
+            // by the live timer display, not as a completed entry in the list.
+            ->whereNotNull('end_time')
             ->orderByDesc('start_time');
 
         if ($request->board_id) {
