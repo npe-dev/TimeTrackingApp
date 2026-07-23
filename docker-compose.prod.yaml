@@ -27,7 +27,14 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      # start_period alone isn't enough: with a 30s interval the FIRST probe
+      # doesn't fire until ~30s in, so the container sits in "starting" and a
+      # fast `up --wait` (or a dependent's `service_healthy` wait) can give up
+      # before the first check ever runs — which is exactly what aborted a
+      # deploy at ~6s. start_interval probes every 3s DURING the start period
+      # (Docker Engine 25+), so the container flips to healthy within seconds.
+      start_period: 60s
+      start_interval: 3s
 
   timetracking_scheduler:
     # Runs Laravel's scheduler so cron-driven work fires in production:
@@ -61,6 +68,10 @@ services:
       interval: 60s
       timeout: 10s
       retries: 3
+      # Probe every 3s during startup so `up --wait` doesn't stall a full 60s
+      # (first interval) waiting for this container to report healthy.
+      start_period: 30s
+      start_interval: 3s
 
   timetracking_queue:
     # Processes the database queue (QUEUE_CONNECTION=database) so slow work —
@@ -94,6 +105,10 @@ services:
       interval: 60s
       timeout: 10s
       retries: 3
+      # Probe every 3s during startup so `up --wait` doesn't stall a full 60s
+      # (first interval) waiting for this container to report healthy.
+      start_period: 30s
+      start_interval: 3s
 
 networks:
   nginx_default:

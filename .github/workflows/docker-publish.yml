@@ -149,7 +149,10 @@ jobs:
             IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml pull
 
             echo "→ Recreating containers (old container serves until new one is healthy)"
-            IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml up -d --wait --remove-orphans
+            # --wait-timeout guards against a slow first boot: give the health
+            # check a generous window instead of letting `up --wait` bail early
+            # (which previously aborted the deploy before migrations ran).
+            IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml up -d --wait --wait-timeout 120 --remove-orphans
 
             echo "→ Reclaiming storage/database ownership for the app user"
             # The 'Fixing ownership' step above chowns the whole checkout to the
