@@ -148,11 +148,22 @@ jobs:
             echo "→ Pulling prebuilt image ${IMAGE}:${IMAGE_TAG}"
             IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml pull
 
-            echo "→ Recreating containers (old container serves until new one is healthy)"
-            # --wait-timeout guards against a slow first boot: give the health
-            # check a generous window instead of letting `up --wait` bail early
-            # (which previously aborted the deploy before migrations ran).
-            IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml up -d --wait --wait-timeout 120 --remove-orphans
+            echo "→ Recreating the app container (old one serves until the new one is healthy)"
+            # Start the app FIRST and wait for it to pass its healthcheck. Its
+            # entrypoint fixes ownership/permissions on the shared storage/database
+            # bind-mounts that the queue/scheduler rely on, so it must be healthy
+            # before they start. Bringing it up alone also keeps its recursive
+            # `chown -R` from competing for CPU with the workers during the /up
+            # healthcheck window — that contention flapped the app's health and
+            # left the queue stuck in "Created" when all three started at once.
+            IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml up -d --wait --wait-timeout 180 timetracking_app
+
+            echo "→ Starting the workers (queue + scheduler)"
+            # --no-deps: the app is already healthy, so DON'T let compose re-evaluate
+            # the `service_healthy` dependency. That concurrent dependency-wait was
+            # racing on a transient health dip and aborting the deploy with
+            # "timeout waiting for dependencies" (queue left in "Created").
+            IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml up -d --no-deps --remove-orphans timetracking_queue timetracking_scheduler
 
             echo "→ Reclaiming storage/database ownership for the app user"
             # The 'Fixing ownership' step above chowns the whole checkout to the
