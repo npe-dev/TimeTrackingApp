@@ -53,7 +53,12 @@ COPY . .
 # Install composer dependencies for production
 RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
-# Build frontend assets
+# Build frontend assets.
+# VITE_SENTRY_DSN is passed as a build-arg; declared ARGs are exposed as env
+# vars to the RUN below, so Vite bakes the DSN into the bundle. It's an ARG (not
+# ENV), so it doesn't persist in the final image. Empty by default → Sentry is
+# tree-shaken out of the bundle.
+ARG VITE_SENTRY_DSN=""
 RUN npm install && \
     npm run build && \
     rm -rf node_modules

@@ -43,6 +43,11 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
+          # Frontend Sentry DSN must be baked into the JS bundle AT BUILD TIME
+          # (Vite reads VITE_* during `npm run build`, which runs here in the
+          # image build — not on the VPS). Browser DSNs are public by design.
+          build-args: |
+            VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN }}
           # Layer cache in the GitHub Actions cache -> fast incremental builds.
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -95,30 +100,25 @@ jobs:
             echo "→ Fixing ownership so git can update tracked files"
             # `git reset --hard` must be able to unlink and rewrite every tracked
             # file — which requires the deploy user to OWN the containing dirs.
-            # storage/ and database/ hold tracked files (the .gitignore markers and
-            # all migrations/seeders/factories) but are chowned to www-data by the
-            # container entrypoint, so a previous attempt to prune them from this
-            # chown left git unable to unlink them → the reset aborted.
+            # storage/ holds tracked files (the .gitignore markers, incl. nested
+            # ones like storage/framework/cache/data/.gitignore) but the container
+            # entrypoint chowns storage/ to www-data on boot, so we must reclaim it
+            # here every deploy or the reset aborts with "Permission denied".
             #
-            # Chown the whole checkout back to the deploy user. The container's
-            # entrypoint re-chowns storage/ + the SQLite file to www-data on boot,
-            # so this ownership only needs to survive until `git reset` below.
+            # Chown the WHOLE checkout — every directory and tracked file — so git
+            # can unlink/rewrite anything. A previous attempt to prune the churning
+            # runtime dirs from this chown left their nested dirs owned by www-data,
+            # and git reset then couldn't unlink the tracked .gitignore inside them.
             #
-            # BUT: a plain `chown -R` races against the running app. www-data is
-            # constantly creating/deleting files under storage/framework/sessions
-            # (and framework cache / logs). If chown -R enumerates such a file and
-            # the app unlinks it before chown reaches it, chown exits non-zero and
-            # aborts the whole deploy ("chown ... sessions/xxx: No such file").
-            # Those are gitignored runtime files git reset never touches, so prune
-            # the churning dirs' *contents* from the walk — the dirs themselves are
-            # still chowned, so git can rewrite the tracked .gitignore markers via
-            # their (deploy-user-owned) parent dir.
-            sudo find . \
-              -path './storage/framework/sessions/*' -prune -o \
-              -path './storage/framework/cache/*' -prune -o \
-              -path './storage/framework/views/*' -prune -o \
-              -path './storage/logs/*' -prune -o \
-              -print0 | sudo xargs -0 -r chown "$USER:$USER"
+            # `|| true`: a recursive chown races the running app, which constantly
+            # creates/deletes files under storage/framework/sessions. If chown hits
+            # a file that vanished mid-walk it prints "No such file" and exits non-
+            # zero — but it does NOT stop; it still chowns every directory and every
+            # surviving (tracked) file. Only vanished gitignored runtime files are
+            # skipped, which git reset never touches. Swallow that transient error;
+            # `git reset` below is the real gate and fails loudly if ownership is
+            # genuinely wrong.
+            sudo chown -R "$USER:$USER" . || true
 
             echo "→ Pulling latest code (compose file, .env template)"
             git fetch --all
@@ -154,8 +154,9 @@ jobs:
               sed -i "s|^SENTRY_SEND_DEFAULT_PII=.*|SENTRY_SEND_DEFAULT_PII=true|g" .env
               # Forward Log::error() (incl. swallowed automation/report errors) to Sentry.
               sed -i "s|^LOG_STACK=.*|LOG_STACK=single,sentry|g" .env
-              # Frontend (Vue) errors reuse the same DSN; Vite bakes it in at build time.
-              sed -i "s|^VITE_SENTRY_DSN=.*|VITE_SENTRY_DSN=${SENTRY_DSN}|g" .env
+              # NOTE: the frontend (Vue) DSN is baked into the JS bundle at image
+              # build time via the VITE_SENTRY_DSN build-arg — NOT here. The VPS
+              # .env is runtime-only and can't change already-built assets.
               echo "SENTRY_ENVIRONMENT=production" >> .env
               echo "SENTRY_RELEASE=${IMAGE_TAG}" >> .env
             else
