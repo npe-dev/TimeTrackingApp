@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Board;
 use App\Models\Column;
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,7 +40,7 @@ class McpServerTest extends TestCase
                 ->json('result.tools')
         )->pluck('name');
 
-        foreach (['list_boards', 'list_tasks', 'create_task', 'start_timer', 'stop_timer', 'get_running_timer'] as $tool) {
+        foreach (['list_boards', 'list_tasks', 'create_task', 'create_subtask', 'update_task', 'start_timer', 'stop_timer', 'get_running_timer'] as $tool) {
             $this->assertContains($tool, $names);
         }
     }
@@ -83,6 +84,76 @@ class McpServerTest extends TestCase
         ])->assertSuccessful()->assertJsonPath('result.isError', false);
 
         $this->assertDatabaseHas('tasks', ['title' => 'From MCP', 'column_id' => $column->id]);
+    }
+
+    public function test_update_task_tool_edits_fields(): void
+    {
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $column = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
+        $task = Task::create(['column_id' => $column->id, 'title' => 'Old', 'position' => 0]);
+
+        $this->rpc($user, [
+            'jsonrpc' => '2.0',
+            'id' => 8,
+            'method' => 'tools/call',
+            'params' => ['name' => 'update_task', 'arguments' => [
+                'task_id' => $task->id,
+                'title' => 'New',
+                'priority' => 'high',
+                'completed' => true,
+            ]],
+        ])->assertSuccessful()->assertJsonPath('result.isError', false);
+
+        $task->refresh();
+        $this->assertSame('New', $task->title);
+        $this->assertSame('high', $task->priority);
+        $this->assertNotNull($task->completed_at);
+    }
+
+    public function test_update_task_tool_moves_card_to_another_column(): void
+    {
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $todo = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
+        $done = Column::create(['board_id' => $board->id, 'name' => 'Done', 'position' => 1]);
+        $task = Task::create(['column_id' => $todo->id, 'title' => 'Move me', 'position' => 0]);
+
+        $this->rpc($user, [
+            'jsonrpc' => '2.0',
+            'id' => 9,
+            'method' => 'tools/call',
+            'params' => ['name' => 'update_task', 'arguments' => [
+                'task_id' => $task->id,
+                'column_id' => $done->id,
+            ]],
+        ])->assertSuccessful()->assertJsonPath('result.isError', false);
+
+        $this->assertDatabaseHas('tasks', ['id' => $task->id, 'column_id' => $done->id]);
+    }
+
+    public function test_create_subtask_tool_creates_a_child_card(): void
+    {
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $column = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
+        $parent = Task::create(['column_id' => $column->id, 'title' => 'Parent', 'position' => 0]);
+
+        $this->rpc($user, [
+            'jsonrpc' => '2.0',
+            'id' => 10,
+            'method' => 'tools/call',
+            'params' => ['name' => 'create_subtask', 'arguments' => [
+                'parent_task_id' => $parent->id,
+                'title' => 'Child',
+            ]],
+        ])->assertSuccessful()->assertJsonPath('result.isError', false);
+
+        $this->assertDatabaseHas('tasks', [
+            'title' => 'Child',
+            'parent_task_id' => $parent->id,
+            'column_id' => $column->id,
+        ]);
     }
 
     public function test_mcp_endpoint_authenticates_with_a_bearer_token(): void

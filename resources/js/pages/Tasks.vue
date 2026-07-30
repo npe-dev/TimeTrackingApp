@@ -1791,6 +1791,16 @@ function renderMarkdown(text) {
     if (line.match(/^### /)) return '<h3 class="text-base font-semibold text-gray-800 mt-2 mb-1">' + line.slice(4) + '</h3>';
     if (line.match(/^## /)) return '<h2 class="text-lg font-semibold text-gray-800 mt-3 mb-1">' + line.slice(3) + '</h2>';
     if (line.match(/^# /)) return '<h1 class="text-xl font-bold text-gray-800 mt-3 mb-1">' + line.slice(2) + '</h1>';
+    // Task-list checkboxes (read-only): - [ ] / - [x]. Must precede the bullet rule.
+    // Uses a <label> wrapper so the line-break pass (which skips <h/<l/<u) won't add a <br>.
+    const task = line.match(/^[-*] \[([ xX])\] (.*)$/);
+    if (task) {
+      const checked = task[1] !== ' ';
+      return '<label class="flex items-start gap-2 text-sm my-0.5">' +
+        '<input type="checkbox" disabled' + (checked ? ' checked' : '') + ' class="mt-1 pointer-events-none">' +
+        '<span' + (checked ? ' class="line-through text-gray-400"' : '') + '>' + task[2] + '</span>' +
+        '</label>';
+    }
     // Unordered list
     if (line.match(/^[-*] /)) return '<li class="ml-4 list-disc text-sm">' + line.slice(2) + '</li>';
     return line;
