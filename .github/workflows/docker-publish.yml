@@ -102,7 +102,22 @@ jobs:
             # Chown the whole checkout back to the deploy user. The container's
             # entrypoint re-chowns storage/ + the SQLite file to www-data on boot,
             # so this ownership only needs to survive until `git reset` below.
-            sudo chown -R "$USER:$USER" .
+            #
+            # BUT: a plain `chown -R` races against the running app. www-data is
+            # constantly creating/deleting files under storage/framework/sessions
+            # (and framework cache / logs). If chown -R enumerates such a file and
+            # the app unlinks it before chown reaches it, chown exits non-zero and
+            # aborts the whole deploy ("chown ... sessions/xxx: No such file").
+            # Those are gitignored runtime files git reset never touches, so prune
+            # the churning dirs' *contents* from the walk — the dirs themselves are
+            # still chowned, so git can rewrite the tracked .gitignore markers via
+            # their (deploy-user-owned) parent dir.
+            sudo find . \
+              -path './storage/framework/sessions/*' -prune -o \
+              -path './storage/framework/cache/*' -prune -o \
+              -path './storage/framework/views/*' -prune -o \
+              -path './storage/logs/*' -prune -o \
+              -print0 | sudo xargs -0 -r chown "$USER:$USER"
 
             echo "→ Pulling latest code (compose file, .env template)"
             git fetch --all
