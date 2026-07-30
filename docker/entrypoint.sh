@@ -34,9 +34,20 @@ if [ "${FIX_PERMISSIONS:-true}" = "true" ]; then
     # directory itself has to be writable by the app. (The deploy workflow chowns
     # the checkout back to the deploy user before `git reset`, so re-owning these
     # git-tracked dirs here does not block the next pull.)
-    chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
-    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-    chmod 664 /var/www/html/database/database.sqlite
+    #
+    # CRITICAL: skip storage/framework/sessions' CONTENTS. File-based sessions
+    # accumulate to hundreds of thousands of files; a recursive chown/chmod over
+    # them takes minutes and blocks php-fpm from starting until well past the
+    # deploy's 180s healthcheck window → "container is unhealthy". Those files
+    # are already www-data-owned (the app created them), so prune the walk there.
+    # `|| true`: workers on the shared volume may unlink a file mid-walk.
+    SESS=/var/www/html/storage/framework/sessions
+    find /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database \
+        -path "$SESS" -prune -o -print0 | xargs -0 -r chown www-data:www-data || true
+    find /var/www/html/storage /var/www/html/bootstrap/cache \
+        -path "$SESS" -prune -o -print0 | xargs -0 -r chmod 775 || true
+    chown www-data:www-data "$SESS" 2>/dev/null || true
+    chmod 664 /var/www/html/database/database.sqlite 2>/dev/null || true
 else
     echo "FIX_PERMISSIONS=false — skipping recursive chown (shared volume handled by the primary container)"
 fi

@@ -110,15 +110,17 @@ jobs:
             # runtime dirs from this chown left their nested dirs owned by www-data,
             # and git reset then couldn't unlink the tracked .gitignore inside them.
             #
-            # `|| true`: a recursive chown races the running app, which constantly
-            # creates/deletes files under storage/framework/sessions. If chown hits
-            # a file that vanished mid-walk it prints "No such file" and exits non-
-            # zero — but it does NOT stop; it still chowns every directory and every
-            # surviving (tracked) file. Only vanished gitignored runtime files are
-            # skipped, which git reset never touches. Swallow that transient error;
-            # `git reset` below is the real gate and fails loudly if ownership is
-            # genuinely wrong.
-            sudo chown -R "$USER:$USER" . || true
+            # Prune storage/framework/sessions' CONTENTS from the walk: file-based
+            # sessions accumulate to hundreds of thousands of files, and chowning
+            # them is both slow (minutes) and pointless (git never touches them).
+            # Everything else — all directories and every tracked .gitignore marker,
+            # incl. nested ones like cache/data/.gitignore — is still chowned, so
+            # `git reset` can unlink/rewrite tracked files. The sessions dir itself
+            # is chowned too; only its contents are skipped. `|| true` tolerates the
+            # session-file vanish race; `git reset` below is the real gate.
+            sudo find . -path ./storage/framework/sessions -prune -o -print0 \
+              | sudo xargs -0 -r chown "$USER:$USER" || true
+            sudo chown "$USER:$USER" ./storage/framework/sessions 2>/dev/null || true
 
             echo "→ Pulling latest code (compose file, .env template)"
             git fetch --all
