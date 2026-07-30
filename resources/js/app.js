@@ -1,5 +1,6 @@
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
+import * as Sentry from '@sentry/vue';
 import App from './App.vue';
 import axios from 'axios';
 
@@ -94,5 +95,21 @@ router.beforeEach(async (to, from) => {
 });
 
 const app = createApp(App);
+
+// Frontend error reporting. The DSN is baked in at build time via Vite; when
+// it's absent (e.g. local dev without a DSN) Sentry is simply not initialised.
+// This reuses the same Sentry project as the Laravel backend.
+if (import.meta.env.VITE_SENTRY_DSN) {
+    // Errors only — no browserTracingIntegration, so the heavy performance
+    // tracing code is tree-shaken out (~50KB gzip saved). Add it back later if
+    // you want performance monitoring.
+    Sentry.init({
+        app,
+        dsn: import.meta.env.VITE_SENTRY_DSN,
+        environment: import.meta.env.VITE_SENTRY_ENVIRONMENT
+            || (import.meta.env.PROD ? 'production' : 'local'),
+    });
+}
+
 app.use(router);
 app.mount('#app');

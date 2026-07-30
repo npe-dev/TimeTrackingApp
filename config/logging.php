@@ -65,6 +65,16 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Forwards Log::error()/warning() to Sentry as issues. Add to LOG_STACK
+        // (e.g. LOG_STACK=single,sentry) so swallowed errors — AutomationService
+        // and ReportService catch-and-log — surface in Sentry, not just the file
+        // log. No-op when SENTRY_LARAVEL_DSN is unset.
+        'sentry' => [
+            'driver' => 'sentry',
+            'level' => env('SENTRY_LOG_LEVEL', 'error'),
+            'bubble' => true,
+        ],
+
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),

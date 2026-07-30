@@ -150,6 +150,12 @@ jobs:
             if [ -n "${SENTRY_DSN}" ]; then
               sed -i "s|SENTRY_LARAVEL_DSN=|SENTRY_LARAVEL_DSN=${SENTRY_DSN}|g" .env
               sed -i "s|^SENTRY_TRACES_SAMPLE_RATE=.*|SENTRY_TRACES_SAMPLE_RATE=0.2|g" .env
+              # Single-user app: attach the user + request payload for debugging.
+              sed -i "s|^SENTRY_SEND_DEFAULT_PII=.*|SENTRY_SEND_DEFAULT_PII=true|g" .env
+              # Forward Log::error() (incl. swallowed automation/report errors) to Sentry.
+              sed -i "s|^LOG_STACK=.*|LOG_STACK=single,sentry|g" .env
+              # Frontend (Vue) errors reuse the same DSN; Vite bakes it in at build time.
+              sed -i "s|^VITE_SENTRY_DSN=.*|VITE_SENTRY_DSN=${SENTRY_DSN}|g" .env
               echo "SENTRY_ENVIRONMENT=production" >> .env
               echo "SENTRY_RELEASE=${IMAGE_TAG}" >> .env
             else
