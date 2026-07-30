@@ -73,11 +73,12 @@ jobs:
           SANCTUM_STATEFUL_DOMAINS: ${{ vars.SANCTUM_STATEFUL_DOMAINS }}
           MAILER_KEY: ${{ secrets.MAILER_KEY }}
           MAIL_FROM_ADDRESS: ${{ vars.MAIL_FROM_ADDRESS }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: IMAGE_TAG,REGISTRY_USER,REGISTRY_TOKEN,APP_KEY,APP_URL,SESSION_DOMAIN,SANCTUM_STATEFUL_DOMAINS,MAILER_KEY,MAIL_FROM_ADDRESS
+          envs: IMAGE_TAG,REGISTRY_USER,REGISTRY_TOKEN,APP_KEY,APP_URL,SESSION_DOMAIN,SANCTUM_STATEFUL_DOMAINS,MAILER_KEY,MAIL_FROM_ADDRESS,SENTRY_DSN
           script: |
             set -e
 
@@ -141,6 +142,18 @@ jobs:
             # Optional: override the From address (must be a MailerSend-verified domain).
             if [ -n "${MAIL_FROM_ADDRESS}" ]; then
               sed -i "s|MAIL_FROM_ADDRESS=.*|MAIL_FROM_ADDRESS=\"${MAIL_FROM_ADDRESS}\"|g" .env
+            fi
+
+            echo "→ Configuring Sentry error monitoring"
+            # Only set the DSN when the secret is present, so a missing secret
+            # leaves Sentry disabled rather than writing a broken DSN.
+            if [ -n "${SENTRY_DSN}" ]; then
+              sed -i "s|SENTRY_LARAVEL_DSN=|SENTRY_LARAVEL_DSN=${SENTRY_DSN}|g" .env
+              sed -i "s|^SENTRY_TRACES_SAMPLE_RATE=.*|SENTRY_TRACES_SAMPLE_RATE=0.2|g" .env
+              echo "SENTRY_ENVIRONMENT=production" >> .env
+              echo "SENTRY_RELEASE=${IMAGE_TAG}" >> .env
+            else
+              echo "⚠️  SENTRY_DSN secret not set — Sentry disabled"
             fi
 
             echo "→ Verifying the app key was set"
