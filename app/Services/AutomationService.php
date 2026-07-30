@@ -213,8 +213,23 @@ class AutomationService
     private static function actionMoveCard(array $action, array $context): void
     {
         $targetColumnId = (int) $action['column_id'];
-        $position = ($action['position'] ?? 'bottom') === 'top' ? 0 : static::getBottomPosition($targetColumnId);
-        Task::where('id', $context['task_id'])->update(['column_id' => $targetColumnId, 'position' => $position]);
+        $taskId = (int) $context['task_id'];
+
+        if (($action['position'] ?? 'bottom') === 'top') {
+            // Make room at the top: shift every other card in the column down by
+            // one, then place this card at 0. Just setting position = 0 without
+            // shifting leaves several cards sharing position 0, and the board's
+            // (position, id) tiebreak then drops the card at a seemingly random
+            // spot instead of the top.
+            Task::where('column_id', $targetColumnId)
+                ->where('id', '!=', $taskId)
+                ->increment('position');
+            $position = 0;
+        } else {
+            $position = static::getBottomPosition($targetColumnId);
+        }
+
+        Task::where('id', $taskId)->update(['column_id' => $targetColumnId, 'position' => $position]);
     }
 
     private static function actionAddLabel(array $action, array $context): void

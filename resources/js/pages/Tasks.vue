@@ -1460,13 +1460,15 @@ async function openTaskModal(task) {
 
 async function closeTaskModal() {
   if (saveTimeout) clearTimeout(saveTimeout);
+  // saveModalTask() patches the edited card into the board locally, so there's
+  // no need to reload the whole board here — that full refetch (board + every
+  // column's tasks + labels) was what made changes take ~1s to appear.
   if (modalTask.value && modalDirty) {
     await saveModalTask();
   }
   modalTask.value = null;
   modalTaskTimeEntries.value = [];
   modalDirty = false;
-  await loadBoard();
 }
 
 // Auto-save debounce
@@ -1483,7 +1485,7 @@ async function saveModalTask() {
   if (!modalTask.value) return;
   if (saveTimeout) clearTimeout(saveTimeout);
   try {
-    await api.put(`/tasks/${modalTask.value.id}`, {
+    const updated = await api.put(`/tasks/${modalTask.value.id}`, {
       title: modalTask.value.title,
       description: modalTask.value.description,
       priority: modalTask.value.priority,
@@ -1493,8 +1495,45 @@ async function saveModalTask() {
       position: modalTask.value.position,
     });
     modalDirty = false;
+    // Patch just this card in place instead of reloading the whole board
+    // (board + every column's tasks + labels). The PUT response is the
+    // fully-updated task incl. project_name/color; labels come from the modal.
+    patchBoardCard(updated);
   } catch (err) {
     console.error('Failed to save task:', err);
+  }
+}
+
+// Update a single card in the local board state from an updated-task payload,
+// avoiding a full loadBoard(). Searches top-level cards and subtasks by id.
+function patchBoardCard(updated) {
+  if (!updated?.id) return;
+  const fields = {
+    title: updated.title,
+    description: updated.description,
+    priority: updated.priority,
+    due_date: updated.due_date,
+    project_id: updated.project_id,
+    project_name: updated.project_name,
+    project_color: updated.project_color,
+    completed_at: updated.completed_at,
+  };
+  // Labels aren't part of the PUT response — carry the modal's current set.
+  if (modalTask.value && modalTask.value.id === updated.id) {
+    fields.labels = modalTask.value.labels || [];
+  }
+  for (const col of (board.value?.columns || [])) {
+    for (const card of (col.tasks || [])) {
+      if (card.id === updated.id) {
+        Object.assign(card, fields);
+        return;
+      }
+      const sub = (card.subtasks || []).find(st => st.id === updated.id);
+      if (sub) {
+        Object.assign(sub, fields);
+        return;
+      }
+    }
   }
 }
 
@@ -1518,13 +1557,33 @@ async function addLabel(globalLabel) {
   });
   const fullTask = await api.get(`/tasks/${modalTask.value.id}`);
   modalTask.value.labels = fullTask.labels;
-  await loadBoard();
+  syncBoardCardLabels();
 }
 
 async function removeLabel(labelId) {
   await api.del(`/labels/${labelId}`);
   modalTask.value.labels = (modalTask.value.labels || []).filter(l => l.id !== labelId);
-  await loadBoard();
+  syncBoardCardLabels();
+}
+
+// Copy the modal's current labels onto the matching board card, avoiding a
+// full board reload just to reflect a label change.
+function syncBoardCardLabels() {
+  const id = modalTask.value?.id;
+  if (!id) return;
+  for (const col of (board.value?.columns || [])) {
+    for (const card of (col.tasks || [])) {
+      if (card.id === id) {
+        card.labels = modalTask.value.labels || [];
+        return;
+      }
+      const sub = (card.subtasks || []).find(st => st.id === id);
+      if (sub) {
+        sub.labels = modalTask.value.labels || [];
+        return;
+      }
+    }
+  }
 }
 
 // Subtasks

@@ -162,39 +162,54 @@ class TaskController extends Controller
     public function move(Request $request, Task $task)
     {
         $newColumnId = (int) $request->column_id;
-        $newPosition = (int) $request->position;
+        // The client sends a *visible index* (0-based slot among the cards it can
+        // see), not an absolute position value. Treat it as such and rebuild the
+        // column's positions from that index. The old increment/decrement math
+        // assumed positions were a contiguous 0..n-1 run, but they aren't:
+        // getBottomPosition jumps by max+1, archived cards keep (hidden) positions,
+        // and automations could leave duplicates — so a "drop at the end" index
+        // collided with a real card and landed the card mid-column.
+        $targetIndex = (int) $request->position;
         $oldColumnId = $task->column_id;
-        $oldPosition = $task->position;
 
-        DB::transaction(function () use ($task, $newColumnId, $newPosition, $oldColumnId, $oldPosition) {
-            if ($oldColumnId === $newColumnId) {
-                if ($newPosition < $oldPosition) {
-                    Task::where('column_id', $newColumnId)
-                        ->where('position', '>=', $newPosition)
-                        ->where('position', '<', $oldPosition)
-                        ->where('id', '!=', $task->id)
-                        ->increment('position');
-                } elseif ($newPosition > $oldPosition) {
-                    Task::where('column_id', $newColumnId)
-                        ->where('position', '>', $oldPosition)
-                        ->where('position', '<=', $newPosition)
-                        ->where('id', '!=', $task->id)
-                        ->decrement('position');
+        DB::transaction(function () use ($task, $newColumnId, $targetIndex, $oldColumnId) {
+            // Sibling scope must match what the board renders and indexes against:
+            // top-level, non-archived cards in the column, in (position, id) order.
+            $siblings = Task::where('column_id', $newColumnId)
+                ->whereNull('parent_task_id')
+                ->whereNull('archived_at')
+                ->where('id', '!=', $task->id)
+                ->orderBy('position')
+                ->orderBy('id')
+                ->get()
+                ->all();
+
+            $index = max(0, min($targetIndex, count($siblings)));
+            array_splice($siblings, $index, 0, [$task]);
+
+            foreach ($siblings as $pos => $sibling) {
+                if ($sibling->id === $task->id) {
+                    $task->update(['column_id' => $newColumnId, 'position' => $pos]);
+                } elseif ($sibling->position !== $pos) {
+                    $sibling->update(['position' => $pos]);
                 }
-            } else {
-                Task::where('column_id', $oldColumnId)
-                    ->where('position', '>', $oldPosition)
-                    ->decrement('position');
-
-                Task::where('column_id', $newColumnId)
-                    ->where('position', '>=', $newPosition)
-                    ->increment('position');
             }
 
-            $task->update(['column_id' => $newColumnId, 'position' => $newPosition]);
-
-            // Move subtasks to the same column
             if ($oldColumnId !== $newColumnId) {
+                // Compact the source column so it too stays a clean 0..n-1 run.
+                $sourceSiblings = Task::where('column_id', $oldColumnId)
+                    ->whereNull('parent_task_id')
+                    ->whereNull('archived_at')
+                    ->orderBy('position')
+                    ->orderBy('id')
+                    ->get();
+                foreach ($sourceSiblings as $pos => $sibling) {
+                    if ($sibling->position !== $pos) {
+                        $sibling->update(['position' => $pos]);
+                    }
+                }
+
+                // Keep subtasks in the same column as their parent.
                 Task::where('parent_task_id', $task->id)->update(['column_id' => $newColumnId]);
             }
         });

@@ -4,11 +4,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Todo's · Time Tracking</title>
+    {{-- Distinguish local from prod by the host actually in the browser: the
+         local .env runs APP_ENV=production too, so environment('local') is
+         unreliable here — the Host header is not. --}}
+    @php($isLocal = in_array(request()->getHost(), ['localhost', '127.0.0.1', '0.0.0.0'], true))
+    <title>{{ $isLocal ? '[DEV] ' : '' }}Todo's · Time Tracking</title>
     <meta name="description" content="Todo's — a personal time tracking app with Kanban task boards, timers, reports and automations.">
     <meta name="keywords" content="time tracking, todo, tasks, kanban, timer, productivity, reports">
     <meta name="author" content="Todo's">
-    <meta name="theme-color" content="#6366f1">
+    <meta name="theme-color" content="{{ $isLocal ? '#ea580c' : '#6366f1' }}">
 
     <!-- Open Graph / social -->
     <meta property="og:type" content="website">
@@ -20,8 +24,8 @@
     <meta name="twitter:description" content="Track time across Kanban boards, tasks and projects — with timers, reports and automations.">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="apple-touch-icon" href="/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="{{ $isLocal ? '/favicon-local.svg' : '/favicon.svg' }}">
+    <link rel="apple-touch-icon" href="{{ $isLocal ? '/favicon-local.svg' : '/favicon.svg' }}">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
