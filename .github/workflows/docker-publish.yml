@@ -191,7 +191,18 @@ jobs:
             # `chown -R` from competing for CPU with the workers during the /up
             # healthcheck window — that contention flapped the app's health and
             # left the queue stuck in "Created" when all three started at once.
-            IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml up -d --wait --wait-timeout 180 timetracking_app
+            if ! IMAGE_TAG="${IMAGE_TAG}" docker compose -f docker-compose.prod.yaml up -d --wait --wait-timeout 180 timetracking_app; then
+              echo "❌ app did not become healthy — dumping diagnostics"
+              echo "===== docker logs timetracking_app (tail 100) ====="
+              docker logs timetracking_app --tail 100 2>&1 || true
+              echo "===== container health state ====="
+              docker inspect --format '{{json .State.Health}}' timetracking_app 2>&1 || true
+              echo "===== /up from inside the container ====="
+              docker exec timetracking_app sh -c 'curl -sS -i http://localhost:80/up | head -40' 2>&1 || true
+              echo "===== storage perms + laravel.log tail ====="
+              docker exec timetracking_app sh -c 'ls -la storage/framework storage/framework/views storage/logs database; echo "--- laravel.log ---"; tail -50 storage/logs/laravel.log' 2>&1 || true
+              exit 1
+            fi
 
             echo "→ Starting the workers (queue + scheduler)"
             # --no-deps: the app is already healthy, so DON'T let compose re-evaluate
