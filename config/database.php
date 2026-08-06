@@ -41,7 +41,16 @@ return [
             'busy_timeout' => env('DB_BUSY_TIMEOUT', 5000),
             'journal_mode' => env('DB_JOURNAL_MODE', 'WAL'),
             'synchronous' => env('DB_SYNCHRONOUS', 'NORMAL'),
-            'transaction_mode' => 'DEFERRED',
+            // IMMEDIATE (not DEFERRED): DB::transaction() issues BEGIN IMMEDIATE,
+            // taking the write lock up front. A DEFERRED transaction that SELECTs
+            // and then UPDATEs must upgrade a read lock to a write lock, and if
+            // another connection wrote in between SQLite returns "database is
+            // locked" *immediately* — busy_timeout does not cover that stale-
+            // snapshot upgrade. With database-backed sessions and queue sharing
+            // this file, those races are common. IMMEDIATE makes busy_timeout
+            // apply, so writers wait-and-retry instead of failing. (Honored on
+            // PHP 8.4+, which is what we run.)
+            'transaction_mode' => env('DB_TRANSACTION_MODE', 'IMMEDIATE'),
         ],
 
         'mysql' => [
