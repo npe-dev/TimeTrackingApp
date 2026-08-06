@@ -5,20 +5,20 @@
       <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
         <h2 class="text-xl font-bold text-gray-800 mb-4">Time Reports</h2>
         <div class="flex flex-wrap items-end gap-4">
-          <div>
+          <div class="w-full sm:w-auto">
             <label class="block text-sm font-medium text-gray-600 mb-1">Start Date</label>
             <input
               v-model="startDate"
               type="date"
-              class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </div>
-          <div>
+          <div class="w-full sm:w-auto">
             <label class="block text-sm font-medium text-gray-600 mb-1">End Date</label>
             <input
               v-model="endDate"
               type="date"
-              class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </div>
           <div class="flex gap-2">
@@ -57,7 +57,7 @@
       </div>
 
       <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6 text-center">
           <p class="text-sm text-gray-500 mb-1">Total Time</p>
           <p class="text-2xl font-bold text-gray-800">{{ formatMinutes(summary.totalMinutes) }}</p>
@@ -77,7 +77,7 @@
         <h3 class="text-lg font-bold text-gray-800 mb-4">Time by Project</h3>
         <div v-if="summary.byProject && summary.byProject.length" class="space-y-3">
           <div v-for="project in summary.byProject" :key="project.id" class="flex items-center gap-3">
-            <span class="text-sm text-gray-600 w-32 truncate shrink-0">{{ project.name }}</span>
+            <span class="text-sm text-gray-600 w-24 sm:w-32 truncate shrink-0">{{ project.name }}</span>
             <div class="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
               <div
                 class="h-full rounded-full flex items-center px-2 transition-all duration-500"
@@ -105,7 +105,7 @@
         <h3 class="text-lg font-bold text-gray-800 mb-4">Time by Day</h3>
         <div v-if="summary.byDay && summary.byDay.length" class="space-y-2">
           <div v-for="day in summary.byDay" :key="day.date" class="flex items-center gap-3">
-            <span class="text-sm text-gray-600 w-28 shrink-0">{{ day.date }}</span>
+            <span class="text-sm text-gray-600 w-20 sm:w-28 shrink-0">{{ day.date }}</span>
             <div class="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
               <div
                 class="h-full bg-indigo-500 rounded-full flex items-center px-2 transition-all duration-500"

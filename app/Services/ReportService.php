@@ -173,14 +173,16 @@ class ReportService
             'completed' => [],
         ];
 
-        // ── Critical: due this week (not done, not archived) ──────────────
+        // ── Critical: due from today through the end of this week ─────────
+        // Lower bound is today (not the week start) so tasks already past due
+        // land only in the "Overdue" list below, never in both sections.
         if (in_array('critical', $sections, true)) {
             $due = Task::with(['column', 'project', 'labels'])
                 ->whereIn('column_id', $columnIds)
                 ->whereNull('archived_at')
                 ->whereNull('completed_at')
                 ->whereNotNull('due_date')
-                ->whereDate('due_date', '>=', $startOfWeek->toDateString())
+                ->whereDate('due_date', '>=', $today)
                 ->whereDate('due_date', '<=', $endOfWeek->toDateString())
                 ->orderBy('due_date')
                 ->get();

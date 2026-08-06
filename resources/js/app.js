@@ -108,6 +108,17 @@ if (import.meta.env.VITE_SENTRY_DSN) {
         dsn: import.meta.env.VITE_SENTRY_DSN,
         environment: import.meta.env.VITE_SENTRY_ENVIRONMENT
             || (import.meta.env.PROD ? 'production' : 'local'),
+        // Drop transport-level axios failures ("Network Error"): these have no
+        // HTTP response and are caused by in-flight requests being aborted on
+        // reload/navigation or by a momentary server blip. They are not
+        // actionable and otherwise fire on every reload-mid-request.
+        beforeSend(event, hint) {
+            const err = hint?.originalException;
+            if (err?.name === 'AxiosError' && err?.message === 'Network Error') {
+                return null;
+            }
+            return event;
+        },
     });
 }
 

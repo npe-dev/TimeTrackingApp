@@ -142,7 +142,7 @@
                 <span class="w-4 h-4 rounded-full shrink-0" :style="{ backgroundColor: p.color }"></span>
                 <span class="text-sm font-medium text-gray-700 truncate">{{ p.name }}</span>
               </div>
-              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+              <div class="row-actions flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
                 <button
                   @click="startEditProject(p)"
                   class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition"
@@ -650,3 +650,10 @@ onMounted(() => {
   loadReportSettings();
 });
 </script>
+
+<style scoped>
+/* Touch devices have no hover — keep per-row actions visible */
+@media (hover: none) {
+  .row-actions { opacity: 1; }
+}
+</style>

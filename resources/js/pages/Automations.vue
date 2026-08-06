@@ -253,8 +253,8 @@
 
                   <!-- Move Card Config -->
                   <template v-if="action.type === 'move_card'">
-                    <div class="flex gap-3">
-                      <div class="flex-1">
+                    <div class="flex flex-wrap gap-3">
+                      <div class="flex-1 min-w-[10rem]">
                         <label class="block text-xs font-medium text-gray-500 mb-1">To Column</label>
                         <select
                           v-model="action.column_id"

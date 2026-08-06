@@ -3,9 +3,9 @@
     <div class="max-w-5xl mx-auto space-y-6">
 
       <!-- Timer Section -->
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-8 text-center">
+      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6 sm:p-8 text-center">
         <!-- Timer Display -->
-        <div class="text-6xl font-mono font-bold text-gray-800 mb-6 tracking-wider">
+        <div class="text-4xl sm:text-6xl font-mono font-bold text-gray-800 mb-6 tracking-wider">
           {{ formattedTimer }}
         </div>
 
@@ -59,7 +59,7 @@
       </div>
 
       <!-- Action Bar -->
-      <div class="flex items-center justify-between">
+      <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <button
             @click="showManualModal = true; resetManualForm()"
@@ -88,7 +88,7 @@
       <!-- Entries List -->
       <div v-for="group in groupedEntries" :key="group.label" class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden">
         <!-- Day Header -->
-        <div class="flex items-center justify-between px-6 py-3 bg-gray-50/80 border-b border-gray-100">
+        <div class="flex items-center justify-between px-4 sm:px-6 py-3 bg-gray-50/80 border-b border-gray-100">
           <div class="flex items-center gap-3">
             <input
               type="checkbox"
@@ -105,7 +105,7 @@
         <div
           v-for="entry in group.entries"
           :key="entry.id"
-          class="flex items-center gap-4 px-6 py-3 border-b border-gray-50 last:border-0 hover:bg-indigo-50/30 transition group"
+          class="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 border-b border-gray-50 last:border-0 hover:bg-indigo-50/30 transition group"
         >
           <input
             type="checkbox"
@@ -125,13 +125,13 @@
               {{ getProjectById(entry.project_id)?.name || 'No project' }}
             </p>
           </div>
-          <span class="text-xs text-gray-400 whitespace-nowrap">
+          <span class="hidden sm:inline text-xs text-gray-400 whitespace-nowrap">
             {{ formatTime(entry.start_time) }} &ndash; {{ formatTime(entry.end_time) }}
           </span>
           <span class="text-sm font-mono font-medium text-gray-700 w-20 text-right">
             {{ formatDuration(entryDuration(entry)) }}
           </span>
-          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+          <div class="row-actions flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
             <button
               v-if="!displayEntry"
               @click="restartEntry(entry)"
@@ -195,7 +195,7 @@
                 class="w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
               />
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-600 mb-1">Start</label>
                 <input
@@ -763,3 +763,10 @@ onUnmounted(() => {
   document.title = originalTitle;
 });
 </script>
+
+<style scoped>
+/* Touch devices have no hover — keep per-row actions visible */
+@media (hover: none) {
+  .row-actions { opacity: 1; }
+}
+</style>
