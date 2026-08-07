@@ -123,8 +123,7 @@
       <!-- Kanban Board -->
       <div
         ref="boardContainer"
-        class="board-container flex gap-4 pb-4 items-start snap-x snap-proximity sm:snap-none"
-        :class="{ 'dragging-active': pointerDragging }"
+        class="board-container flex gap-4 pb-4 items-start"
         style="min-height: 70vh;"
         @mousedown="onBoardMouseDown"
       >
@@ -133,7 +132,7 @@
         <div
           v-for="column in filteredColumns"
           :key="column.id"
-          class="flex-shrink-0 w-[85vw] max-w-[20rem] sm:w-80 snap-start column-wrapper"
+          class="flex-shrink-0 w-80 column-wrapper"
           :class="{
             'column-being-dragged': draggedColumn?.id === column.id,
             'column-drop-before': columnDropTarget?.columnId === column.id && columnDropTarget?.before,
@@ -200,6 +199,9 @@
             <div
               class="flex-1 overflow-y-auto p-2 pt-1 tasks-list"
               :class="{ 'column-drag-over': dropTarget?.columnId === column.id }"
+              @dragover.prevent="onDragOver($event, column.id)"
+              @dragleave="onDragLeave($event, column.id)"
+              @drop="onDrop($event, column.id)"
               :data-column-id="column.id"
             >
               <template v-for="(task, idx) in (column.tasks || [])" :key="task.id">
@@ -214,7 +216,10 @@
 
                 <!-- Task Card (Parent) -->
                 <div
-                  class="task-card bg-white rounded-lg border border-gray-200 shadow-sm p-3 group"
+                  :draggable="true"
+                  @dragstart="onDragStart($event, task, column.id)"
+                  @dragend="onDragEnd"
+                  class="task-card bg-white rounded-lg border border-gray-200 shadow-sm p-3 cursor-move group"
                   :class="{ 'task-card-done': isTaskDone(task) }"
                   @click="openTaskModal(task)"
                 >
@@ -222,19 +227,6 @@
                   <div class="flex items-start gap-2 mb-1 -mx-3 -mt-3 px-3 pt-3 pb-1 rounded-t-lg"
                     :style="task.labels && task.labels.length ? { backgroundColor: task.labels[0].color + '18' } : {}"
                   >
-                    <button
-                      class="drag-handle shrink-0 -ml-1 mt-0.5 p-0.5 rounded text-gray-300 hover:text-gray-500 opacity-60 group-hover:opacity-100 transition-opacity"
-                      @pointerdown="onCardPointerDown($event, task, column.id)"
-                      @click.stop
-                      title="Drag to move"
-                      aria-label="Drag to move card"
-                    >
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <circle cx="7" cy="5" r="1.4" /><circle cx="13" cy="5" r="1.4" />
-                        <circle cx="7" cy="10" r="1.4" /><circle cx="13" cy="10" r="1.4" />
-                        <circle cx="7" cy="15" r="1.4" /><circle cx="13" cy="15" r="1.4" />
-                      </svg>
-                    </button>
                     <input
                       type="checkbox"
                       class="task-done-checkbox"
@@ -278,7 +270,7 @@
                         {{ task.project.name }}
                       </span>
                     </div>
-                    <div class="card-actions flex items-center gap-1 transition-opacity"
+                    <div class="flex items-center gap-1 transition-opacity"
                       :class="isTimerRunningForTask(task.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
                     >
                       <button
@@ -313,7 +305,7 @@
                         @click.stop="markSubtaskDone(subtask, task)"
                       />
                       <h4 class="text-xs font-medium text-gray-700 flex-1 leading-snug truncate">{{ subtask.title }}</h4>
-                      <div class="card-actions flex items-center gap-1 transition-opacity"
+                      <div class="flex items-center gap-1 transition-opacity"
                         :class="isTimerRunningForTask(subtask.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
                       >
                         <button
@@ -395,7 +387,7 @@
         <!-- Add Column Button -->
         <div
           v-if="columns.length < 5"
-          class="flex-shrink-0 w-[85vw] max-w-[20rem] sm:w-80 snap-start"
+          class="flex-shrink-0 w-80"
         >
           <div v-if="addingColumn" class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-4 space-y-2">
             <input
@@ -1211,123 +1203,80 @@ async function markTaskDone(task) {
 
 // ─── Drag & Drop ───────────────────────────────────────────────────
 
-// Unified Pointer Events drag: works for both mouse and touch. The drag is
-// initiated from the card's `.drag-handle` (which has `touch-action: none`),
-// so pressing the handle never conflicts with scrolling the list or swiping
-// between columns — only that gesture is captured for dragging.
-
 const draggedTask = ref(null);
 const dragSourceColumnId = ref(null);
 const dropTarget = ref(null);
 const draggedCardHeight = ref(60);
-const pointerDragging = ref(false); // true once a drag is actually armed
 let draggedCardEl = null;
 
-let dragPointerId = null;
-let dragArmed = false;
-let dragHandleEl = null;
-let dragGhost = null;
-let grabOffsetX = 0, grabOffsetY = 0, ghostWidth = 0;
-let dragStartX = 0, dragStartY = 0;
-let lastClientX = 0, lastClientY = 0;
-let autoScrollRAF = null;
-let suppressCardClick = false;
-const DRAG_THRESHOLD = 6; // px before a press becomes a drag
-
-function onCardPointerDown(event, task, columnId) {
-  // Left mouse button only; touch/pen always have button 0
-  if (event.button != null && event.button !== 0) return;
-
-  dragPointerId = event.pointerId;
-  dragHandleEl = event.currentTarget;
+function onDragStart(event, task, columnId) {
   draggedTask.value = task;
   dragSourceColumnId.value = columnId;
-  dragArmed = false;
-  dragStartX = lastClientX = event.clientX;
-  dragStartY = lastClientY = event.clientY;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', String(task.id));
 
+  // Capture the card element and height
   draggedCardEl = event.target.closest('.task-card');
   if (draggedCardEl) {
-    // Placeholder height = card + any visible subtasks below it
     draggedCardHeight.value = draggedCardEl.offsetHeight;
-    const subtaskCount = visibleSubtasks(task).length;
-    if (subtaskCount) {
-      let nextEl = draggedCardEl.nextElementSibling;
-      let extraHeight = 0;
-      for (let i = 0; i < subtaskCount && nextEl; i++) {
-        if (nextEl.classList.contains('subtask-card')) extraHeight += nextEl.offsetHeight + 8;
-        nextEl = nextEl.nextElementSibling;
-      }
-      draggedCardHeight.value += extraHeight;
-    }
-    const rect = draggedCardEl.getBoundingClientRect();
-    grabOffsetX = event.clientX - rect.left;
-    grabOffsetY = event.clientY - rect.top;
-    ghostWidth = rect.width;
   }
 
-  try { dragHandleEl.setPointerCapture(event.pointerId); } catch (e) { /* ignore */ }
-  window.addEventListener('pointermove', onCardPointerMove);
-  window.addEventListener('pointerup', onCardPointerUp);
-  window.addEventListener('pointercancel', onCardPointerUp);
-  event.preventDefault();
-}
-
-function startPointerDrag() {
-  dragArmed = true;
-  pointerDragging.value = true;
-
-  if (draggedCardEl) {
-    dragGhost = draggedCardEl.cloneNode(true);
-    dragGhost.classList.add('drag-ghost');
-    dragGhost.classList.remove('dragging');
-    dragGhost.style.width = ghostWidth + 'px';
-    document.body.appendChild(dragGhost);
-
-    // Hide the original card + its subtasks; the placeholder shows the target
-    draggedCardEl.classList.add('dragging');
+  // Capture subtask card heights too
+  const subtaskCount = visibleSubtasks(task).length;
+  if (subtaskCount && draggedCardEl) {
+    // Include subtask height in placeholder
     let nextEl = draggedCardEl.nextElementSibling;
-    while (nextEl && nextEl.classList.contains('subtask-card')) {
-      nextEl.classList.add('dragging');
+    let extraHeight = 0;
+    for (let i = 0; i < subtaskCount && nextEl; i++) {
+      if (nextEl.classList.contains('subtask-card')) {
+        extraHeight += nextEl.offsetHeight + 8; // card + margin
+      }
       nextEl = nextEl.nextElementSibling;
     }
+    draggedCardHeight.value += extraHeight;
   }
-  moveGhost();
-  startAutoScroll();
+
+  // Let the browser capture the drag ghost image, THEN hide the card
+  requestAnimationFrame(() => {
+    if (draggedCardEl && draggedTask.value?.id === task.id) {
+      draggedCardEl.classList.add('dragging');
+      // Also hide subtask cards
+      let nextEl = draggedCardEl.nextElementSibling;
+      while (nextEl && nextEl.classList.contains('subtask-card')) {
+        nextEl.classList.add('dragging');
+        nextEl = nextEl.nextElementSibling;
+      }
+    }
+  });
 }
 
-function moveGhost() {
-  if (!dragGhost) return;
-  dragGhost.style.transform = `translate(${lastClientX - grabOffsetX}px, ${lastClientY - grabOffsetY}px)`;
-}
-
-function onCardPointerMove(event) {
-  if (event.pointerId !== dragPointerId) return;
-  lastClientX = event.clientX;
-  lastClientY = event.clientY;
-
-  if (!dragArmed) {
-    const dist = Math.hypot(event.clientX - dragStartX, event.clientY - dragStartY);
-    if (dist < DRAG_THRESHOLD) return;
-    startPointerDrag();
+function onDragEnd() {
+  // Restore the card + subtask visibility
+  if (draggedCardEl) {
+    draggedCardEl.classList.remove('dragging');
+    // Unhide subtask cards
+    document.querySelectorAll('.subtask-card.dragging').forEach(el => el.classList.remove('dragging'));
+    draggedCardEl = null;
   }
-  event.preventDefault();
-  moveGhost();
-  updateDropTarget(event.clientX, event.clientY);
+  draggedTask.value = null;
+  dragSourceColumnId.value = null;
+  dropTarget.value = null;
 }
 
-// Determine which column/slot the pointer is over. The ghost has
-// `pointer-events: none`, so elementFromPoint ignores it.
-function updateDropTarget(clientX, clientY) {
-  const el = document.elementFromPoint(clientX, clientY);
-  const list = el && el.closest ? el.closest('.tasks-list') : null;
-  if (!list || !list.dataset.columnId) return; // keep last known target
-  const columnId = Number(list.dataset.columnId);
+function onDragOver(event, columnId) {
+  event.dataTransfer.dropEffect = 'move';
+  if (!draggedTask.value) return;
+
   const col = columns.value.find(c => c.id === columnId);
   if (!col) return;
 
-  // Visible parent cards (dragged card is hidden)
-  const parentCards = Array.from(list.querySelectorAll('.task-card:not(.dragging)'));
+  const container = event.currentTarget;
+  const mouseY = event.clientY;
+
+  // Get visible parent task cards (not dragged, not subtasks)
+  const parentCards = Array.from(container.querySelectorAll('.task-card:not(.dragging)'));
+
+  // For each parent card, compute its group bounds (parent + visible subtasks below it)
   const groups = parentCards.map(card => {
     const top = card.getBoundingClientRect().top;
     let bottom = card.getBoundingClientRect().bottom;
@@ -1339,11 +1288,12 @@ function updateDropTarget(clientX, clientY) {
     return { top, bottom };
   });
 
+  // Build slots (gaps between task groups)
   const slots = [];
   for (let i = 0; i <= groups.length; i++) {
     let slotY;
     if (groups.length === 0) {
-      const cr = list.getBoundingClientRect();
+      const cr = container.getBoundingClientRect();
       slotY = cr.top + cr.height / 2;
     } else if (i === 0) {
       slotY = groups[0].top;
@@ -1355,11 +1305,15 @@ function updateDropTarget(clientX, clientY) {
     slots.push({ index: i, slotY });
   }
 
+  // Find closest slot to mouse
   let bestSlot = slots[0];
-  let bestDist = Math.abs(clientY - bestSlot.slotY);
+  let bestDist = Math.abs(mouseY - bestSlot.slotY);
   for (let s = 1; s < slots.length; s++) {
-    const dist = Math.abs(clientY - slots[s].slotY);
-    if (dist < bestDist) { bestDist = dist; bestSlot = slots[s]; }
+    const dist = Math.abs(mouseY - slots[s].slotY);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestSlot = slots[s];
+    }
   }
 
   // Map visible slot index back to data index (account for hidden dragged card)
@@ -1370,7 +1324,10 @@ function updateDropTarget(clientX, clientY) {
     let actualIndex = 0;
     for (let t = 0; t < tasks.length; t++) {
       if (tasks[t].id === draggedTask.value.id) continue;
-      if (visibleCount === bestSlot.index) { actualIndex = t; break; }
+      if (visibleCount === bestSlot.index) {
+        actualIndex = t;
+        break;
+      }
       visibleCount++;
       actualIndex = t + 1;
     }
@@ -1380,75 +1337,24 @@ function updateDropTarget(clientX, clientY) {
   dropTarget.value = { columnId, position: dataIndex };
 }
 
-// Auto-scroll the board horizontally (to reach off-screen columns) and the
-// hovered list vertically while dragging near an edge.
-function startAutoScroll() {
-  if (autoScrollRAF) return;
-  const step = () => {
-    if (!pointerDragging.value) { autoScrollRAF = null; return; }
-    const bc = boardContainer.value;
-    if (bc) {
-      const rect = bc.getBoundingClientRect();
-      const edge = 64, speed = 14;
-      if (lastClientX < rect.left + edge) bc.scrollLeft -= speed;
-      else if (lastClientX > rect.right - edge) bc.scrollLeft += speed;
-    }
-    const el = document.elementFromPoint(lastClientX, lastClientY);
-    const list = el && el.closest ? el.closest('.tasks-list') : null;
-    if (list) {
-      const r = list.getBoundingClientRect();
-      const edge = 44, speed = 12;
-      if (lastClientY < r.top + edge) list.scrollTop -= speed;
-      else if (lastClientY > r.bottom - edge) list.scrollTop += speed;
-    }
-    updateDropTarget(lastClientX, lastClientY);
-    autoScrollRAF = requestAnimationFrame(step);
-  };
-  autoScrollRAF = requestAnimationFrame(step);
+function onDragLeave(event, columnId) {
+  // Only clear if we actually left the container
+  const container = event.currentTarget;
+  const related = event.relatedTarget;
+  if (related && container.contains(related)) return;
+  if (dropTarget.value?.columnId === columnId) {
+    dropTarget.value = null;
+  }
 }
 
-function onCardPointerUp(event) {
-  if (event.pointerId !== dragPointerId) return;
-  window.removeEventListener('pointermove', onCardPointerMove);
-  window.removeEventListener('pointerup', onCardPointerUp);
-  window.removeEventListener('pointercancel', onCardPointerUp);
+async function onDrop(event, columnId) {
+  event.preventDefault();
+  if (!draggedTask.value || !dropTarget.value) return;
 
-  const wasDragging = dragArmed;
-  const cancelled = event.type === 'pointercancel';
-  const target = dropTarget.value;
-  const taskId = draggedTask.value?.id;
+  const taskId = draggedTask.value.id;
+  const { position } = dropTarget.value;
   const sourceColumnId = dragSourceColumnId.value;
 
-  cleanupPointerDrag();
-
-  if (!wasDragging || cancelled || !target || target.columnId == null) {
-    draggedTask.value = null;
-    dragSourceColumnId.value = null;
-    dropTarget.value = null;
-    return;
-  }
-
-  // A real drag happened — swallow the click that follows pointerup so the
-  // task modal doesn't open.
-  suppressCardClick = true;
-  setTimeout(() => { suppressCardClick = false; }, 350);
-
-  finalizeMove(taskId, sourceColumnId, target.columnId, target.position);
-}
-
-function cleanupPointerDrag() {
-  pointerDragging.value = false;
-  dragArmed = false;
-  dragPointerId = null;
-  dragHandleEl = null;
-  if (autoScrollRAF) { cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
-  if (dragGhost) { dragGhost.remove(); dragGhost = null; }
-  document.querySelectorAll('.task-card.dragging, .subtask-card.dragging')
-    .forEach(el => el.classList.remove('dragging'));
-  draggedCardEl = null;
-}
-
-async function finalizeMove(taskId, sourceColumnId, columnId, position) {
   // Optimistic local move
   const sourceCol = columns.value.find(c => c.id === sourceColumnId);
   const destCol = columns.value.find(c => c.id === columnId);
@@ -1463,12 +1369,17 @@ async function finalizeMove(taskId, sourceColumnId, columnId, position) {
     }
   }
 
+  // Clear drag state
   draggedTask.value = null;
   dragSourceColumnId.value = null;
   dropTarget.value = null;
 
+  // Persist to API then refresh
   try {
-    await api.patch(`/tasks/${taskId}/move`, { column_id: columnId, position });
+    await api.patch(`/tasks/${taskId}/move`, {
+      column_id: columnId,
+      position,
+    });
   } catch (err) {
     console.error('Failed to move task:', err);
   }
@@ -1508,7 +1419,6 @@ const availableLabels = computed(() => {
 });
 
 async function openTaskModal(task) {
-  if (suppressCardClick) return; // ignore the click that follows a drag
   if (saveTimeout) clearTimeout(saveTimeout);
   modalDirty = false;
   confirmingDelete.value = false;
@@ -2073,18 +1983,12 @@ function onFilterKeydown(event) {
 onMounted(async () => {
   document.addEventListener('click', onClickOutside, true);
   document.addEventListener('keydown', onGlobalKeydown);
-  try {
-    await loadBoards();
-    await Promise.all([
-      loadBoard(),
-      loadProjects(activeBoardId.value),
-      checkRunning(),
-    ]);
-  } catch {
-    // Transient network failure (server restart, or an in-flight request
-    // aborted by a reload/navigation). Not actionable — the page reloads its
-    // data on the next mount; don't let it become an unhandled rejection.
-  }
+  await loadBoards();
+  await Promise.all([
+    loadBoard(),
+    loadProjects(activeBoardId.value),
+    checkRunning(),
+  ]);
 });
 
 onUnmounted(() => {
@@ -2271,45 +2175,9 @@ onUnmounted(() => {
   cursor: grab;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
   /* Center the columns when they fit; the `safe` keyword falls back to
      start-alignment when they overflow so scrolling still reaches the first one. */
   justify-content: safe center;
-}
-
-/* Disable scroll-snap mid-drag so edge auto-scroll stays smooth */
-.board-container.dragging-active {
-  scroll-snap-type: none !important;
-}
-
-/* Card drag handle — touch-action:none so pressing it never scrolls/swipes */
-.drag-handle {
-  touch-action: none;
-  cursor: grab;
-}
-.drag-handle:active {
-  cursor: grabbing;
-}
-
-/* Floating clone that follows the pointer during a drag */
-.drag-ghost {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 60;
-  pointer-events: none;
-  opacity: 0.92;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
-  transform: translate(-9999px, -9999px);
-  rotate: 2deg;
-  will-change: transform;
-}
-
-/* On touch devices there is no hover — keep card actions + handle visible */
-@media (hover: none) {
-  .card-actions { opacity: 1 !important; }
-  .drag-handle { opacity: 1 !important; }
 }
 
 .board-container::-webkit-scrollbar {
