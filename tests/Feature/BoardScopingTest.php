@@ -127,7 +127,7 @@ class BoardScopingTest extends TestCase
             ->getJson("/api/reports/summary?board_id={$boardA->id}")
             ->assertSuccessful();
 
-        $names = collect($response->json('byProject'))->pluck('name');
+        $names = collect($response->json('by_project'))->pluck('name');
         $this->assertContains('Alpha', $names);
         $this->assertNotContains('Beta', $names);
     }

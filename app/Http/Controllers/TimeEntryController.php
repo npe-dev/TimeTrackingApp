@@ -168,6 +168,10 @@ class TimeEntryController extends Controller
             $query->whereHas('project', fn ($q) => $q->where('board_id', $request->board_id));
         }
 
+        if ($request->project_id) {
+            $query->where('project_id', $request->project_id);
+        }
+
         if ($request->start_date && $request->end_date) {
             $query->whereDate('start_time', '>=', $request->start_date)
                 ->whereDate('start_time', '<=', $request->end_date);
@@ -220,9 +224,10 @@ class TimeEntryController extends Controller
 
         $csv = implode("\n", array_map(fn ($r) => implode(',', $r), $rows));
 
+        $timestamp = now()->format('Y-m-d_His');
         $filename = $request->task_id
-            ? "task-{$request->task_id}-time-entries-".now()->toDateString().'.csv'
-            : 'time-entries-'.now()->toDateString().'.csv';
+            ? "task-{$request->task_id}-time-entries-{$timestamp}.csv"
+            : "time-entries-{$timestamp}.csv";
 
         return response($csv)
             ->header('Content-Type', 'text/csv')

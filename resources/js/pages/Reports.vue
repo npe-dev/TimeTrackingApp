@@ -9,6 +9,7 @@
             <label class="block text-sm font-medium text-gray-600 mb-1">Start Date</label>
             <input
               v-model="startDate"
+              @change="onDateChange"
               type="date"
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
@@ -17,9 +18,23 @@
             <label class="block text-sm font-medium text-gray-600 mb-1">End Date</label>
             <input
               v-model="endDate"
+              @change="onDateChange"
               type="date"
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
+          </div>
+          <div class="w-full sm:w-auto">
+            <label class="block text-sm font-medium text-gray-600 mb-1">Project</label>
+            <select
+              v-model="selectedProjectId"
+              @change="loadReport"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            >
+              <option :value="null">All Projects</option>
+              <option v-for="project in projects" :key="project.id" :value="project.id">
+                {{ project.name }}
+              </option>
+            </select>
           </div>
           <div class="flex gap-2">
             <button
@@ -41,12 +56,6 @@
               This Month
             </button>
           </div>
-          <button
-            @click="loadReport"
-            class="px-5 py-2 text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-          >
-            Apply
-          </button>
           <button
             @click="exportCsv"
             class="px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-all"
@@ -133,13 +142,16 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useApi } from '@/composables/useApi';
 import { useBoard } from '@/composables/useBoard';
+import { useProjects } from '@/composables/useProjects';
 
 const { fetchUser } = useAuth();
 const { get } = useApi();
 const { activeBoardId } = useBoard();
+const { projects, loadProjects } = useProjects();
 
 const startDate = ref('');
 const endDate = ref('');
+const selectedProjectId = ref(null);
 const activePreset = ref('week');
 const summary = ref({
   totalMinutes: 0,
@@ -200,12 +212,20 @@ function setThisMonth() {
   loadReport();
 }
 
+// Manually editing a date means it's no longer a preset range; drop the preset
+// highlight and reload immediately (no Apply button).
+function onDateChange() {
+  activePreset.value = null;
+  loadReport();
+}
+
 async function loadReport() {
   try {
     const data = await get('/reports/summary', {
       start_date: startDate.value,
       end_date: endDate.value,
       board_id: activeBoardId.value,
+      project_id: selectedProjectId.value,
     });
     summary.value = {
       totalMinutes: data.total_minutes ?? 0,
@@ -225,14 +245,21 @@ function exportCsv() {
     end_date: endDate.value,
   });
   if (activeBoardId.value) params.set('board_id', activeBoardId.value);
+  if (selectedProjectId.value) params.set('project_id', selectedProjectId.value);
   window.open(`/api/entries/export/csv?${params.toString()}`, '_blank');
 }
 
-// Reload the report when the active board changes.
-watch(activeBoardId, () => loadReport());
+// When the active board changes, refresh its project list, clear any project
+// selection (it belonged to the previous board), and reload the report.
+watch(activeBoardId, async (boardId) => {
+  selectedProjectId.value = null;
+  await loadProjects(boardId);
+  loadReport();
+});
 
 onMounted(async () => {
   await fetchUser();
+  await loadProjects(activeBoardId.value);
   setThisWeek();
 });
 </script>
