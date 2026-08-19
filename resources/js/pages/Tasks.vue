@@ -275,16 +275,16 @@
                     >
                       <button
                         @click.stop="toggleTaskTimer(task)"
-                        class="p-1 rounded-lg transition-colors"
+                        class="p-2 rounded-lg transition-colors"
                         :class="isTimerRunningForTask(task.id)
                           ? 'text-red-500 hover:bg-red-50'
                           : 'text-gray-400 hover:bg-indigo-50 hover:text-indigo-500'"
                         :title="isTimerRunningForTask(task.id) ? 'Stop timer' : 'Start timer'"
                       >
-                        <svg v-if="!isTimerRunningForTask(task.id)" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <svg v-if="!isTimerRunningForTask(task.id)" class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
                           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
                         </svg>
-                        <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <svg v-else class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
                           <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                         </svg>
                       </button>
