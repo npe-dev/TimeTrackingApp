@@ -539,10 +539,10 @@
                   v-if="editingDescription"
                   ref="descriptionTextarea"
                   v-model="modalTask.description"
-                  @input="debouncedSave"
+                  @input="autoGrowDescription(); debouncedSave()"
                   placeholder="Add a description... (supports **bold**, *italic*, `code`, [links](url), # headings)"
-                  rows="6"
-                  class="w-full rounded-lg border border-indigo-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none resize-y"
+                  rows="4"
+                  class="w-full rounded-lg border border-indigo-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none resize-y overflow-hidden min-h-[80px]"
                 ></textarea>
                 <div
                   v-else
@@ -1825,10 +1825,20 @@ function entryDuration(entry) {
   return Math.max(0, Math.floor((end - start) / 1000));
 }
 
+// Grow the description textarea to fit its content so edit mode matches the
+// height of the rendered view — no scrolling inside a small box.
+function autoGrowDescription() {
+  const el = descriptionTextarea.value;
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
 function startEditDescription() {
   editingDescription.value = true;
   nextTick(() => {
     descriptionTextarea.value?.focus();
+    autoGrowDescription();
   });
 }
 
