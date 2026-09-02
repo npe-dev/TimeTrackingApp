@@ -50,8 +50,32 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
 
-# Install composer dependencies for production
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+# Install composer dependencies for production.
+#
+# GitHub's api.github.com zipball endpoint occasionally returns transient 5xx
+# (e.g. 504 Gateway Timeout). Under --prefer-dist a dist failure is fatal because
+# Composer disables the source fallback ("Not trying alternative sources"), so a
+# momentary GitHub hiccup kills the whole build. Harden it: retry the dist install
+# a few times with backoff, then fall back to installing from git source (git is
+# installed above) which uses a different, more reliable transport.
+#
+# An optional GITHUB_TOKEN build-arg raises the GitHub API rate limit. It's an ARG
+# (not ENV) and empty by default, so it never persists in the image.
+ARG GITHUB_TOKEN=""
+RUN set -eu; \
+    if [ -n "$GITHUB_TOKEN" ]; then \
+        composer config --global github-oauth.github.com "$GITHUB_TOKEN"; \
+    fi; \
+    for i in 1 2 3; do \
+        echo "composer install (dist) attempt $i..."; \
+        if composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist; then \
+            exit 0; \
+        fi; \
+        echo "dist install failed (attempt $i); retrying in $((i * 15))s..."; \
+        sleep $((i * 15)); \
+    done; \
+    echo "dist install still failing; falling back to --prefer-source"; \
+    composer install --no-dev --optimize-autoloader --no-interaction --prefer-source
 
 # Build frontend assets.
 # VITE_SENTRY_DSN is passed as a build-arg; declared ARGs are exposed as env
