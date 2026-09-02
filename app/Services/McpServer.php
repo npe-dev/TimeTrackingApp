@@ -4,8 +4,11 @@ namespace App\Services;
 
 use App\Models\Board;
 use App\Models\Column;
+use App\Models\Project;
 use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -106,6 +109,69 @@ class McpServer
                 'description' => 'Get the currently running time entry, if any.',
                 'inputSchema' => ['type' => 'object', 'properties' => (object) []],
             ],
+            [
+                'name' => 'list_projects',
+                'description' => 'List projects (id, name, color, board). Optionally filter to a single board. Use this to find the project_id needed by start_timer.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'board_id' => ['type' => 'integer', 'description' => 'Only list projects belonging to this board.'],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'list_time_entries',
+                'description' => 'List completed time entries (most recent first) with their duration, so you can find, review or audit tracked time. Filter by board, project, task, and/or date range. The currently-running timer is excluded (use get_running_timer for that).',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'board_id' => ['type' => 'integer', 'description' => 'Only entries whose project belongs to this board.'],
+                        'project_id' => ['type' => 'integer', 'description' => 'Only entries for this project.'],
+                        'task_id' => ['type' => 'integer', 'description' => 'Only entries for this task (its own subtasks are NOT included).'],
+                        'start_date' => ['type' => 'string', 'description' => 'Inclusive lower bound on the entry start date (YYYY-MM-DD).'],
+                        'end_date' => ['type' => 'string', 'description' => 'Inclusive upper bound on the entry start date (YYYY-MM-DD).'],
+                        'limit' => ['type' => 'integer', 'description' => 'Maximum number of entries to return (default 50, max 500).'],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'time_summary',
+                'description' => 'Summarise tracked time grouped by project over an optional date range: total duration plus a per-project breakdown. Useful for "where did my hours go" questions.',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'board_id' => ['type' => 'integer', 'description' => 'Only summarise entries whose project belongs to this board.'],
+                        'start_date' => ['type' => 'string', 'description' => 'Inclusive lower bound on the entry start date (YYYY-MM-DD).'],
+                        'end_date' => ['type' => 'string', 'description' => 'Inclusive upper bound on the entry start date (YYYY-MM-DD).'],
+                    ],
+                ],
+            ],
+            [
+                'name' => 'update_time_entry',
+                'description' => 'Edit a completed time entry: change its start time, end time, description, or project. Only the fields you provide are changed. Use this to correct a mistaken entry (e.g. a timer left running overnight).',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'entry_id' => ['type' => 'integer', 'description' => 'The time entry to update.'],
+                        'start_time' => ['type' => 'string', 'description' => 'New start time (YYYY-MM-DD HH:MM:SS or ISO 8601).'],
+                        'end_time' => ['type' => 'string', 'description' => 'New end time (YYYY-MM-DD HH:MM:SS or ISO 8601).'],
+                        'description' => ['type' => 'string', 'description' => 'New description.'],
+                        'project_id' => ['type' => 'integer', 'description' => 'Reassign the entry to this project.'],
+                    ],
+                    'required' => ['entry_id'],
+                ],
+            ],
+            [
+                'name' => 'delete_time_entry',
+                'description' => 'Permanently delete a time entry. Use for a bogus or duplicated entry (e.g. a stray overnight timer).',
+                'inputSchema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'entry_id' => ['type' => 'integer', 'description' => 'The time entry to delete.'],
+                    ],
+                    'required' => ['entry_id'],
+                ],
+            ],
         ];
     }
 
@@ -123,6 +189,11 @@ class McpServer
             'start_timer' => $this->startTimer($args, $user),
             'stop_timer' => $this->stopTimer($user),
             'get_running_timer' => $this->runningTimer($user),
+            'list_projects' => $this->listProjects($args),
+            'list_time_entries' => $this->listTimeEntries($args, $user),
+            'time_summary' => $this->timeSummary($args, $user),
+            'update_time_entry' => $this->updateTimeEntry($args, $user),
+            'delete_time_entry' => $this->deleteTimeEntry($args, $user),
             default => throw new InvalidArgumentException("Unknown tool: {$name}"),
         };
     }
@@ -357,5 +428,190 @@ class McpServer
             'description' => $entry->description,
             'start_time' => $entry->start_time?->toIso8601String(),
         ];
+    }
+
+    private function listProjects(array $args): array
+    {
+        $query = Project::with('board')->orderBy('name');
+
+        if (isset($args['board_id'])) {
+            $query->where('board_id', (int) $args['board_id']);
+        }
+
+        return $query->get()->map(fn (Project $p) => [
+            'id' => $p->id,
+            'name' => $p->name,
+            'color' => $p->color,
+            'board_id' => $p->board_id,
+            'board' => $p->board?->name,
+        ])->all();
+    }
+
+    /**
+     * List completed time entries for the user, newest first, with computed
+     * durations. Mirrors the filters of TimeEntryController::index and excludes
+     * the still-running timer (end_time IS NULL).
+     */
+    private function listTimeEntries(array $args, User $user): array
+    {
+        $query = TimeEntry::with(['project.board', 'task'])
+            ->where('user_id', $user->id)
+            ->whereNotNull('end_time')
+            ->orderByDesc('start_time');
+
+        if (isset($args['board_id'])) {
+            $boardId = (int) $args['board_id'];
+            $query->whereHas('project', fn ($q) => $q->where('board_id', $boardId));
+        }
+        if (isset($args['project_id'])) {
+            $query->where('project_id', (int) $args['project_id']);
+        }
+        if (isset($args['task_id'])) {
+            $query->where('task_id', (int) $args['task_id']);
+        }
+        if (! empty($args['start_date'])) {
+            $query->whereDate('start_time', '>=', $args['start_date']);
+        }
+        if (! empty($args['end_date'])) {
+            $query->whereDate('start_time', '<=', $args['end_date']);
+        }
+
+        $limit = max(1, min(500, (int) ($args['limit'] ?? 50)));
+
+        return $query->limit($limit)->get()
+            ->map(fn (TimeEntry $e) => $this->formatEntry($e))
+            ->all();
+    }
+
+    /**
+     * Total tracked time grouped by project over an optional date range.
+     */
+    private function timeSummary(array $args, User $user): array
+    {
+        $query = TimeEntry::with('project')
+            ->where('user_id', $user->id)
+            ->whereNotNull('end_time');
+
+        if (isset($args['board_id'])) {
+            $boardId = (int) $args['board_id'];
+            $query->whereHas('project', fn ($q) => $q->where('board_id', $boardId));
+        }
+        if (! empty($args['start_date'])) {
+            $query->whereDate('start_time', '>=', $args['start_date']);
+        }
+        if (! empty($args['end_date'])) {
+            $query->whereDate('start_time', '<=', $args['end_date']);
+        }
+
+        $byProject = [];
+        $totalMinutes = 0;
+        foreach ($query->get() as $e) {
+            $minutes = (int) round($e->start_time->diffInMinutes($e->end_time));
+            $totalMinutes += $minutes;
+
+            $key = $e->project_id ?? 0;
+            if (! isset($byProject[$key])) {
+                $byProject[$key] = [
+                    'project_id' => $e->project_id,
+                    'project' => $e->project?->name ?? 'No project',
+                    'minutes' => 0,
+                ];
+            }
+            $byProject[$key]['minutes'] += $minutes;
+        }
+
+        usort($byProject, fn ($a, $b) => $b['minutes'] <=> $a['minutes']);
+
+        return [
+            'total_minutes' => $totalMinutes,
+            'total_label' => $this->durationLabel($totalMinutes),
+            'projects' => array_map(fn ($p) => [
+                ...$p,
+                'label' => $this->durationLabel($p['minutes']),
+            ], $byProject),
+        ];
+    }
+
+    private function updateTimeEntry(array $args, User $user): array
+    {
+        $entry = TimeEntry::where('user_id', $user->id)->find($args['entry_id'] ?? null);
+        if (! $entry) {
+            throw new InvalidArgumentException('Time entry not found.');
+        }
+
+        $updates = [];
+
+        if (array_key_exists('description', $args)) {
+            $updates['description'] = (string) $args['description'];
+        }
+        if (! empty($args['start_time'])) {
+            $updates['start_time'] = Carbon::parse($args['start_time']);
+        }
+        if (! empty($args['end_time'])) {
+            $updates['end_time'] = Carbon::parse($args['end_time']);
+        }
+        if (array_key_exists('project_id', $args)) {
+            $projectId = (int) $args['project_id'];
+            if (! Project::whereKey($projectId)->exists()) {
+                throw new InvalidArgumentException('Project not found.');
+            }
+            $updates['project_id'] = $projectId;
+        }
+
+        // Validate the resulting interval using the new values where given,
+        // falling back to the entry's current ones.
+        $start = $updates['start_time'] ?? $entry->start_time;
+        $end = $updates['end_time'] ?? $entry->end_time;
+        if ($start && $end && $end->lessThanOrEqualTo($start)) {
+            throw new InvalidArgumentException('end_time must be after start_time.');
+        }
+
+        $entry->update($updates);
+
+        return $this->formatEntry($entry->fresh(['project.board', 'task']));
+    }
+
+    private function deleteTimeEntry(array $args, User $user): array
+    {
+        $entry = TimeEntry::where('user_id', $user->id)->find($args['entry_id'] ?? null);
+        if (! $entry) {
+            throw new InvalidArgumentException('Time entry not found.');
+        }
+
+        $entry->delete();
+
+        return ['deleted' => true, 'entry_id' => (int) ($args['entry_id'])];
+    }
+
+    /** Shared shape for a completed time entry, including computed duration. */
+    private function formatEntry(TimeEntry $e): array
+    {
+        $minutes = $e->end_time
+            ? (int) round($e->start_time->diffInMinutes($e->end_time))
+            : null;
+
+        return [
+            'id' => $e->id,
+            'project_id' => $e->project_id,
+            'project' => $e->project?->name,
+            'board_id' => $e->project?->board_id,
+            'board' => $e->project?->board?->name,
+            'task_id' => $e->task_id,
+            'task' => $e->task?->title,
+            'description' => $e->description,
+            'start_time' => $e->start_time?->toIso8601String(),
+            'end_time' => $e->end_time?->toIso8601String(),
+            'duration_minutes' => $minutes,
+            'duration_label' => $minutes !== null ? $this->durationLabel($minutes) : null,
+        ];
+    }
+
+    /** Minutes → "Xh Ym" (or "Ym" under an hour). Matches the app's report format. */
+    private function durationLabel(int $minutes): string
+    {
+        $h = intdiv($minutes, 60);
+        $m = $minutes % 60;
+
+        return $h > 0 ? "{$h}h {$m}m" : "{$m}m";
     }
 }

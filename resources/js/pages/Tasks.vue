@@ -542,7 +542,7 @@
                   @input="autoGrowDescription(); debouncedSave()"
                   placeholder="Add a description... (supports **bold**, *italic*, `code`, [links](url), # headings)"
                   rows="4"
-                  class="w-full rounded-lg border border-indigo-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none resize-y overflow-hidden min-h-[80px]"
+                  class="w-full rounded-lg border border-indigo-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none resize-y overflow-y-auto min-h-[80px]"
                 ></textarea>
                 <div
                   v-else
@@ -1830,15 +1830,23 @@ function entryDuration(entry) {
 function autoGrowDescription() {
   const el = descriptionTextarea.value;
   if (!el) return;
+  // Reset first so scrollHeight reflects the true content height, then add the
+  // top+bottom border (scrollHeight excludes borders while border-box height
+  // includes them) so the last line is never clipped.
   el.style.height = 'auto';
-  el.style.height = el.scrollHeight + 'px';
+  const border = el.offsetHeight - el.clientHeight;
+  el.style.height = (el.scrollHeight + border) + 'px';
 }
 
 function startEditDescription() {
   editingDescription.value = true;
+  // Measure after the textarea is rendered AND laid out. A single nextTick can
+  // fire before the browser has computed scrollHeight for the freshly-shown
+  // element, so re-run on the next frame to catch the settled layout.
   nextTick(() => {
     descriptionTextarea.value?.focus();
     autoGrowDescription();
+    requestAnimationFrame(autoGrowDescription);
   });
 }
 

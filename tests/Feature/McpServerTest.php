@@ -40,9 +40,173 @@ class McpServerTest extends TestCase
                 ->json('result.tools')
         )->pluck('name');
 
-        foreach (['list_boards', 'list_tasks', 'create_task', 'create_subtask', 'update_task', 'start_timer', 'stop_timer', 'get_running_timer'] as $tool) {
+        foreach ([
+            'list_boards', 'list_tasks', 'create_task', 'create_subtask', 'update_task',
+            'start_timer', 'stop_timer', 'get_running_timer',
+            'list_projects', 'list_time_entries', 'time_summary', 'update_time_entry', 'delete_time_entry',
+        ] as $tool) {
             $this->assertContains($tool, $names);
         }
+    }
+
+    private function callTool(User $user, string $name, array $arguments)
+    {
+        return $this->rpc($user, [
+            'jsonrpc' => '2.0',
+            'id' => 42,
+            'method' => 'tools/call',
+            'params' => ['name' => $name, 'arguments' => $arguments],
+        ])->assertSuccessful()->assertJsonPath('result.isError', false);
+    }
+
+    /** Decode the JSON text payload a tool returns in result.content[0].text. */
+    private function toolResult($response): mixed
+    {
+        return json_decode($response->json('result.content.0.text'), true);
+    }
+
+    public function test_list_projects_tool_returns_projects(): void
+    {
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+
+        $data = $this->toolResult($this->callTool($user, 'list_projects', ['board_id' => $board->id]));
+
+        $this->assertCount(1, $data);
+        $this->assertSame('Alpha', $data[0]['name']);
+        $this->assertSame($board->id, $data[0]['board_id']);
+    }
+
+    public function test_list_time_entries_returns_completed_entries_with_duration(): void
+    {
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+
+        // A 16h entry (the exact case that motivated this) plus the running timer.
+        $completed = TimeEntry::create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'description' => 'Overnight',
+            'start_time' => '2026-09-01 16:28:00',
+            'end_time' => '2026-09-02 08:28:00',
+        ]);
+        TimeEntry::create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'description' => 'Running',
+            'start_time' => '2026-09-02 10:56:00',
+            'end_time' => null,
+        ]);
+
+        $data = $this->toolResult($this->callTool($user, 'list_time_entries', ['board_id' => $board->id]));
+
+        // Running timer excluded; completed entry present with a 16h duration.
+        $this->assertCount(1, $data);
+        $this->assertSame($completed->id, $data[0]['id']);
+        $this->assertSame(960, $data[0]['duration_minutes']);
+        $this->assertSame('16h 0m', $data[0]['duration_label']);
+    }
+
+    public function test_time_summary_groups_by_project(): void
+    {
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+
+        TimeEntry::create([
+            'project_id' => $project->id, 'user_id' => $user->id,
+            'start_time' => '2026-09-01 09:00:00', 'end_time' => '2026-09-01 10:30:00',
+        ]);
+        TimeEntry::create([
+            'project_id' => $project->id, 'user_id' => $user->id,
+            'start_time' => '2026-09-01 11:00:00', 'end_time' => '2026-09-01 11:30:00',
+        ]);
+
+        $data = $this->toolResult($this->callTool($user, 'time_summary', ['board_id' => $board->id]));
+
+        $this->assertSame(120, $data['total_minutes']);
+        $this->assertSame('2h 0m', $data['total_label']);
+        $this->assertSame('Alpha', $data['projects'][0]['project']);
+        $this->assertSame(120, $data['projects'][0]['minutes']);
+    }
+
+    public function test_update_time_entry_corrects_the_end_time(): void
+    {
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $entry = TimeEntry::create([
+            'project_id' => $project->id, 'user_id' => $user->id,
+            'start_time' => '2026-09-01 16:28:00', 'end_time' => '2026-09-02 08:28:00',
+        ]);
+
+        $this->callTool($user, 'update_time_entry', [
+            'entry_id' => $entry->id,
+            'end_time' => '2026-09-01 18:28:00',
+        ]);
+
+        $entry->refresh();
+        $this->assertSame('2026-09-01 18:28:00', $entry->end_time->toDateTimeString());
+    }
+
+    public function test_update_time_entry_rejects_end_before_start(): void
+    {
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $entry = TimeEntry::create([
+            'project_id' => $project->id, 'user_id' => $user->id,
+            'start_time' => '2026-09-01 16:00:00', 'end_time' => '2026-09-01 17:00:00',
+        ]);
+
+        $this->rpc($user, [
+            'jsonrpc' => '2.0', 'id' => 43, 'method' => 'tools/call',
+            'params' => ['name' => 'update_time_entry', 'arguments' => [
+                'entry_id' => $entry->id,
+                'end_time' => '2026-09-01 15:00:00',
+            ]],
+        ])->assertSuccessful()->assertJsonPath('result.isError', true);
+    }
+
+    public function test_delete_time_entry_removes_the_entry(): void
+    {
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $entry = TimeEntry::create([
+            'project_id' => $project->id, 'user_id' => $user->id,
+            'start_time' => '2026-09-01 16:00:00', 'end_time' => '2026-09-01 17:00:00',
+        ]);
+
+        $this->callTool($user, 'delete_time_entry', ['entry_id' => $entry->id]);
+
+        $this->assertDatabaseMissing('time_entries', ['id' => $entry->id]);
+    }
+
+    public function test_time_entry_tools_are_scoped_to_the_user(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $foreign = TimeEntry::create([
+            'project_id' => $project->id, 'user_id' => $other->id,
+            'start_time' => '2026-09-01 16:00:00', 'end_time' => '2026-09-01 17:00:00',
+        ]);
+
+        // Not visible to $user…
+        $data = $this->toolResult($this->callTool($user, 'list_time_entries', []));
+        $this->assertCount(0, $data);
+
+        // …and not deletable by $user.
+        $this->rpc($user, [
+            'jsonrpc' => '2.0', 'id' => 44, 'method' => 'tools/call',
+            'params' => ['name' => 'delete_time_entry', 'arguments' => ['entry_id' => $foreign->id]],
+        ])->assertSuccessful()->assertJsonPath('result.isError', true);
+
+        $this->assertDatabaseHas('time_entries', ['id' => $foreign->id]);
     }
 
     public function test_initialized_notification_returns_no_content(): void
