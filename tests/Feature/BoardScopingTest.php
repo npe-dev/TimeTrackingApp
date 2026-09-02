@@ -102,6 +102,35 @@ class BoardScopingTest extends TestCase
             ->assertJsonPath('project_id', $project->id);
     }
 
+    public function test_orphaned_entry_still_appears_under_its_tasks_board(): void
+    {
+        // Reproduces the prod case: a project deletion nulls the entry's
+        // project_id (nullOnDelete) but the task keeps its project link. The
+        // board-filtered Timer list must still surface the entry, falling back
+        // to the task's project for the board_id / project name.
+        $user = User::factory()->create();
+        $board = Board::create(['name' => 'Work']);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Datalake']);
+        $column = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
+        $task = Task::create(['column_id' => $column->id, 'project_id' => $project->id, 'title' => 'Restore project', 'position' => 0]);
+
+        TimeEntry::create([
+            'user_id' => $user->id,
+            'project_id' => null, // orphaned by a project deletion
+            'task_id' => $task->id,
+            'start_time' => now()->subHour(),
+            'end_time' => now(),
+        ]);
+
+        $response = $this->actingAs($user)
+            ->getJson("/api/entries?board_id={$board->id}")
+            ->assertSuccessful();
+
+        $this->assertCount(1, $response->json());
+        $this->assertEquals($board->id, $response->json('0.board_id'));
+        $this->assertEquals('Datalake', $response->json('0.project_name'));
+    }
+
     public function test_report_summary_is_scoped_by_board(): void
     {
         $user = User::factory()->create();

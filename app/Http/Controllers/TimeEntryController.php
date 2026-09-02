@@ -12,7 +12,7 @@ class TimeEntryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = TimeEntry::with(['project', 'task'])
+        $query = TimeEntry::with(['project', 'task.project'])
             ->where('user_id', $request->user()->id)
             // Exclude the currently-running (open) timer; it is shown separately
             // by the live timer display, not as a completed entry in the list.
@@ -20,7 +20,14 @@ class TimeEntryController extends Controller
             ->orderByDesc('start_time');
 
         if ($request->board_id) {
-            $query->whereHas('project', fn ($q) => $q->where('board_id', $request->board_id));
+            // Match the entry's own project, but also fall back to its task's
+            // project: a deleted-and-recreated project nulls the entry's
+            // project_id (nullOnDelete) while the task keeps its link, so these
+            // orphaned entries would otherwise vanish from the board's list.
+            $query->where(function ($q) use ($request) {
+                $q->whereHas('project', fn ($p) => $p->where('board_id', $request->board_id))
+                    ->orWhereHas('task.project', fn ($p) => $p->where('board_id', $request->board_id));
+            });
         }
 
         if ($request->start_date && $request->end_date) {
@@ -119,7 +126,7 @@ class TimeEntryController extends Controller
         $subtaskIds = $task->subtasks()->pluck('id')->toArray();
         $allIds = array_merge([(int) $taskId], $subtaskIds);
 
-        $entries = TimeEntry::with(['project', 'task'])
+        $entries = TimeEntry::with(['project', 'task.project'])
             ->whereIn('task_id', $allIds)
             ->orderByDesc('start_time')
             ->get();
@@ -236,11 +243,15 @@ class TimeEntryController extends Controller
 
     private function formatEntry($entry)
     {
+        // Fall back to the task's project when the entry's own project link was
+        // nulled by a project deletion (see index()), so orphaned entries still
+        // render with a project name/color and land under the right board.
+        $project = $entry->project ?? $entry->task?->project;
         $arr = $entry->toArray();
-        $arr['project_name'] = $entry->project?->name;
-        $arr['project_color'] = $entry->project?->color;
+        $arr['project_name'] = $project?->name;
+        $arr['project_color'] = $project?->color;
         $arr['task_title'] = $entry->task?->title;
-        $arr['board_id'] = $entry->project?->board_id;
+        $arr['board_id'] = $project?->board_id;
 
         return $arr;
     }
