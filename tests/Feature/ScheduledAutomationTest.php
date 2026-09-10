@@ -30,9 +30,9 @@ class ScheduledAutomationTest extends TestCase
         parent::tearDown();
     }
 
-    private function board(): Board
+    private function board(?User $user = null): Board
     {
-        return Board::create(['name' => 'Work']);
+        return Board::create(['name' => 'Work', 'user_id' => $user?->id]);
     }
 
     public function test_daily_schedule_creates_a_card_once_per_slot(): void
@@ -178,7 +178,7 @@ class ScheduledAutomationTest extends TestCase
     public function test_event_automation_records_a_run(): void
     {
         $user = User::factory()->create();
-        $board = $this->board();
+        $board = $this->board($user);
         $todo = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $done = Column::create(['board_id' => $board->id, 'name' => 'Done', 'position' => 1]);
         $task = Task::create(['column_id' => $todo->id, 'title' => 'Ship it', 'position' => 0]);
@@ -202,12 +202,12 @@ class ScheduledAutomationTest extends TestCase
 
     public function test_archived_tasks_are_hidden_from_the_board(): void
     {
-        $board = $this->board();
+        $user = User::factory()->create();
+        $board = $this->board($user);
         $col = Column::create(['board_id' => $board->id, 'name' => 'Inbox', 'position' => 0]);
         $visible = Task::create(['column_id' => $col->id, 'title' => 'Visible', 'position' => 0]);
         Task::create(['column_id' => $col->id, 'title' => 'Hidden', 'position' => 1, 'archived_at' => now()]);
 
-        $user = User::factory()->create();
         $response = $this->actingAs($user)->getJson("/api/columns/{$col->id}/tasks")->assertSuccessful();
 
         $titles = collect($response->json())->pluck('title');

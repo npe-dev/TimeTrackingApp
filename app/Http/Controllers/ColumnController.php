@@ -15,6 +15,9 @@ class ColumnController extends Controller
 
     public function store(Request $request)
     {
+        // 404s (via the owner global scope) if the board isn't the user's.
+        Board::findOrFail($request->board_id);
+
         return Column::create([
             'board_id' => $request->board_id,
             'name' => $request->name,

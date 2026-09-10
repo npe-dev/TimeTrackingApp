@@ -17,7 +17,7 @@ class CardDoneAutomationTest extends TestCase
     public function test_marking_a_card_done_runs_a_card_done_automation(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $todo = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $done = Column::create(['board_id' => $board->id, 'name' => 'Done', 'position' => 1]);
         $task = Task::create(['column_id' => $todo->id, 'title' => 'Ship it', 'position' => 0]);
@@ -42,7 +42,7 @@ class CardDoneAutomationTest extends TestCase
     public function test_move_to_top_lands_the_card_at_position_zero_and_shifts_the_rest(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $todo = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $done = Column::create(['board_id' => $board->id, 'name' => 'Done', 'position' => 1]);
 
@@ -74,7 +74,7 @@ class CardDoneAutomationTest extends TestCase
     public function test_unchecking_a_done_card_does_not_run_the_automation(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $todo = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $done = Column::create(['board_id' => $board->id, 'name' => 'Done', 'position' => 1]);
         $task = Task::create([

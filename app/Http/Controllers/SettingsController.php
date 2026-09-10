@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -14,10 +15,11 @@ class SettingsController extends Controller
             if (Storage::disk('public')->exists("backgrounds/background.{$ext}")) {
                 return response()->json([
                     'exists' => true,
-                    'url' => '/storage/backgrounds/background.' . $ext . '?t=' . time(),
+                    'url' => '/storage/backgrounds/background.'.$ext.'?t='.time(),
                 ]);
             }
         }
+
         return response()->json(['exists' => false]);
     }
 
@@ -39,7 +41,7 @@ class SettingsController extends Controller
 
         return response()->json([
             'success' => true,
-            'url' => '/storage/backgrounds/background.' . $ext . '?t=' . time(),
+            'url' => '/storage/backgrounds/background.'.$ext.'?t='.time(),
         ]);
     }
 
@@ -48,6 +50,7 @@ class SettingsController extends Controller
         foreach ($this->extensions as $ext) {
             Storage::disk('public')->delete("backgrounds/background.{$ext}");
         }
+
         return response()->json(['success' => true]);
     }
 }

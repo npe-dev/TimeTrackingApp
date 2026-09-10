@@ -24,7 +24,7 @@ class TaskMoveTest extends TestCase
     public function test_dropping_at_the_end_with_gappy_positions_lands_last(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $todo = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $done = Column::create(['board_id' => $board->id, 'name' => 'Done', 'position' => 1]);
 
@@ -46,7 +46,7 @@ class TaskMoveTest extends TestCase
     public function test_dropping_in_the_middle_respects_the_index(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $todo = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $done = Column::create(['board_id' => $board->id, 'name' => 'Done', 'position' => 1]);
 
@@ -66,7 +66,7 @@ class TaskMoveTest extends TestCase
     public function test_same_column_reorder_to_end(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $col = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
 
         $a = Task::create(['column_id' => $col->id, 'title' => 'A', 'position' => 0]);
@@ -84,7 +84,7 @@ class TaskMoveTest extends TestCase
     public function test_moving_out_compacts_the_source_column(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $todo = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $done = Column::create(['board_id' => $board->id, 'name' => 'Done', 'position' => 1]);
 

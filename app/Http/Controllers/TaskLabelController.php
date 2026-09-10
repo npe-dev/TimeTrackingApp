@@ -1,21 +1,29 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\TaskLabel;
 use App\Models\GlobalLabel;
+use App\Models\Task;
+use App\Models\TaskLabel;
 use Illuminate\Http\Request;
 
 class TaskLabelController extends Controller
 {
     public function store(Request $request, $taskId)
     {
+        // 404s (via the owner global scope) if the task isn't the user's.
+        Task::findOrFail($taskId);
+
         if ($request->global_label_id) {
             $existing = TaskLabel::where('task_id', $taskId)
                 ->where('global_label_id', $request->global_label_id)
                 ->first();
-            if ($existing) return $existing;
+            if ($existing) {
+                return $existing;
+            }
 
             $globalLabel = GlobalLabel::find($request->global_label_id);
+
             return TaskLabel::create([
                 'task_id' => $taskId,
                 'label' => $globalLabel ? $globalLabel->name : $request->label,
@@ -34,6 +42,7 @@ class TaskLabelController extends Controller
     public function destroy(TaskLabel $label)
     {
         $label->delete();
+
         return response()->json(['success' => true]);
     }
 }

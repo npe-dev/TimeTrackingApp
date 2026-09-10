@@ -68,8 +68,8 @@ class McpServerTest extends TestCase
     public function test_list_projects_tool_returns_projects(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
-        Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
+        Project::create(['board_id' => $board->id, 'name' => 'Alpha', 'user_id' => $user->id]);
 
         $data = $this->toolResult($this->callTool($user, 'list_projects', ['board_id' => $board->id]));
 
@@ -81,8 +81,8 @@ class McpServerTest extends TestCase
     public function test_list_time_entries_returns_completed_entries_with_duration(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
-        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha', 'user_id' => $user->id]);
 
         // A 16h entry (the exact case that motivated this) plus the running timer.
         $completed = TimeEntry::create([
@@ -112,8 +112,8 @@ class McpServerTest extends TestCase
     public function test_time_summary_groups_by_project(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
-        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha', 'user_id' => $user->id]);
 
         TimeEntry::create([
             'project_id' => $project->id, 'user_id' => $user->id,
@@ -135,8 +135,8 @@ class McpServerTest extends TestCase
     public function test_update_time_entry_corrects_the_end_time(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
-        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha', 'user_id' => $user->id]);
         $entry = TimeEntry::create([
             'project_id' => $project->id, 'user_id' => $user->id,
             'start_time' => '2026-09-01 16:28:00', 'end_time' => '2026-09-02 08:28:00',
@@ -154,8 +154,8 @@ class McpServerTest extends TestCase
     public function test_update_time_entry_rejects_end_before_start(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
-        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha', 'user_id' => $user->id]);
         $entry = TimeEntry::create([
             'project_id' => $project->id, 'user_id' => $user->id,
             'start_time' => '2026-09-01 16:00:00', 'end_time' => '2026-09-01 17:00:00',
@@ -173,8 +173,8 @@ class McpServerTest extends TestCase
     public function test_delete_time_entry_removes_the_entry(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
-        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha', 'user_id' => $user->id]);
         $entry = TimeEntry::create([
             'project_id' => $project->id, 'user_id' => $user->id,
             'start_time' => '2026-09-01 16:00:00', 'end_time' => '2026-09-01 17:00:00',
@@ -189,8 +189,8 @@ class McpServerTest extends TestCase
     {
         $user = User::factory()->create();
         $other = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
-        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha', 'user_id' => $user->id]);
         $foreign = TimeEntry::create([
             'project_id' => $project->id, 'user_id' => $other->id,
             'start_time' => '2026-09-01 16:00:00', 'end_time' => '2026-09-01 17:00:00',
@@ -220,8 +220,8 @@ class McpServerTest extends TestCase
     public function test_start_timer_tool_starts_a_timer(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
-        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha', 'user_id' => $user->id]);
 
         $response = $this->rpc($user, [
             'jsonrpc' => '2.0',
@@ -237,7 +237,7 @@ class McpServerTest extends TestCase
     public function test_create_task_tool_creates_a_card(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $column = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
 
         $this->rpc($user, [
@@ -253,7 +253,7 @@ class McpServerTest extends TestCase
     public function test_update_task_tool_edits_fields(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $column = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $task = Task::create(['column_id' => $column->id, 'title' => 'Old', 'position' => 0]);
 
@@ -278,7 +278,7 @@ class McpServerTest extends TestCase
     public function test_update_task_tool_moves_card_to_another_column(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $todo = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $done = Column::create(['board_id' => $board->id, 'name' => 'Done', 'position' => 1]);
         $task = Task::create(['column_id' => $todo->id, 'title' => 'Move me', 'position' => 0]);
@@ -299,7 +299,7 @@ class McpServerTest extends TestCase
     public function test_create_subtask_tool_creates_a_child_card(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
         $column = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $parent = Task::create(['column_id' => $column->id, 'title' => 'Parent', 'position' => 0]);
 

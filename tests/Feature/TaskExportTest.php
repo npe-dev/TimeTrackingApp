@@ -18,8 +18,8 @@ class TaskExportTest extends TestCase
     public function test_card_csv_export_includes_subtask_time_entries(): void
     {
         $user = User::factory()->create();
-        $board = Board::create(['name' => 'Work']);
-        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha']);
+        $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
+        $project = Project::create(['board_id' => $board->id, 'name' => 'Alpha', 'user_id' => $user->id]);
         $column = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
 
         $parent = Task::create(['column_id' => $column->id, 'title' => 'Parent', 'position' => 0]);

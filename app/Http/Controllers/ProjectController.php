@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Board;
 use App\Models\Project;
 use Illuminate\Http\Request;
 
@@ -20,10 +21,14 @@ class ProjectController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'board_id' => 'required|exists:boards,id',
+            'board_id' => 'required|integer',
             'name' => 'required|string',
             'color' => 'nullable|string',
         ]);
+
+        // 404s (via the owner global scope) if the board isn't the user's,
+        // which also validates existence.
+        Board::findOrFail($validated['board_id']);
 
         $project = Project::create([
             'board_id' => $validated['board_id'],

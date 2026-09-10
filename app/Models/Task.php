@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use App\Support\Ownership;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class Task extends Model
 {
@@ -13,6 +16,15 @@ class Task extends Model
         'completed_at' => 'datetime',
         'archived_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('owner', function (Builder $query) {
+            if ($userId = Auth::id()) {
+                $query->whereIn('tasks.column_id', Ownership::columnIds($userId));
+            }
+        });
+    }
 
     public function column()
     {

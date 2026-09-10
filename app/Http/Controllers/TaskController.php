@@ -88,6 +88,9 @@ class TaskController extends Controller
         $columnId = $request->column_id;
         $parentTaskId = $request->parent_task_id;
 
+        // 404s (via the owner global scope) if the column isn't the user's.
+        Column::findOrFail($columnId);
+
         // Always append new cards to the bottom. The client can't reliably compute
         // the bottom position from its visible list: archived tasks keep their
         // position but are hidden, so gaps make a count-based position collide with
@@ -123,6 +126,9 @@ class TaskController extends Controller
     public function update(Request $request, Task $task)
     {
         $oldTask = $task->toArray();
+
+        // 404s (via the owner global scope) if the target column isn't the user's.
+        Column::findOrFail($request->column_id);
 
         $task->update([
             'column_id' => $request->column_id,
@@ -162,6 +168,8 @@ class TaskController extends Controller
     public function move(Request $request, Task $task)
     {
         $newColumnId = (int) $request->column_id;
+        // 404s (via the owner global scope) if the target column isn't the user's.
+        Column::findOrFail($newColumnId);
         // The client sends a *visible index* (0-based slot among the cards it can
         // see), not an absolute position value. Treat it as such and rebuild the
         // column's positions from that index. The old increment/decrement math

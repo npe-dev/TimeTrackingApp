@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Automation;
+use App\Models\Board;
 use Illuminate\Http\Request;
 
 class AutomationController extends Controller
@@ -29,6 +30,9 @@ class AutomationController extends Controller
 
     public function store(Request $request)
     {
+        // 404s (via the owner global scope) if the board isn't the user's.
+        Board::findOrFail($request->board_id);
+
         $trigger = $request->input('trigger', []);
 
         $automation = Automation::create([
@@ -44,6 +48,9 @@ class AutomationController extends Controller
 
     public function update(Request $request, Automation $automation)
     {
+        // 404s (via the owner global scope) if the target board isn't the user's.
+        Board::findOrFail($request->board_id);
+
         $trigger = $request->input('trigger', []);
 
         $automation->update([

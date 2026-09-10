@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use App\Support\Ownership;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class Automation extends Model
 {
@@ -14,6 +17,15 @@ class Automation extends Model
         'enabled' => 'boolean',
         'last_run_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('owner', function (Builder $query) {
+            if ($userId = Auth::id()) {
+                $query->whereIn('automations.board_id', Ownership::boardIds($userId));
+            }
+        });
+    }
 
     public function board()
     {
