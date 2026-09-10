@@ -14,12 +14,14 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportSettingController;
 use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\TokenController;
 use App\Http\Controllers\McpController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes (public)
-Route::post('/register', [AuthController::class, 'register']);
+// Public self-registration is disabled — accounts are created by an admin
+// via POST /api/admin/users (invite). Only login remains public.
 Route::post('/login', [AuthController::class, 'login']);
 
 // Background status is now per-board (protected), this stub keeps old clients happy
@@ -122,6 +124,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/automations/{automation}', [AutomationController::class, 'update']);
     Route::delete('/automations/{automation}', [AutomationController::class, 'destroy']);
     Route::patch('/automations/{automation}/toggle', [AutomationController::class, 'toggle']);
+
+    // Admin (admin-only)
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        Route::get('/users', [AdminController::class, 'users']);
+        Route::post('/users', [AdminController::class, 'inviteUser']);
+    });
 
     // Settings (kept for any future global settings)
     Route::post('/settings/background', fn() => response()->json(['success' => false, 'message' => 'Use per-board background endpoint']));

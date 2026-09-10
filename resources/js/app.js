@@ -19,12 +19,6 @@ const routes = [
         meta: { guest: true },
     },
     {
-        path: '/register',
-        name: 'register',
-        component: () => import('./pages/Register.vue'),
-        meta: { guest: true },
-    },
-    {
         path: '/',
         name: 'home',
         component: () => import('./pages/Landing.vue'),
@@ -66,6 +60,12 @@ const routes = [
         component: () => import('./pages/Profile.vue'),
         meta: { auth: true },
     },
+    {
+        path: '/admin',
+        name: 'admin',
+        component: () => import('./pages/Admin.vue'),
+        meta: { auth: true, admin: true },
+    },
 ];
 
 const router = createRouter({
@@ -87,6 +87,10 @@ router.beforeEach(async (to, from) => {
 
     if (to.meta.auth && !user) {
         return { name: 'login' };
+    }
+
+    if (to.meta.admin && !user?.is_admin) {
+        return { name: 'timer' };
     }
 
     if (to.meta.guest && user) {

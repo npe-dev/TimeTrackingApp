@@ -15,7 +15,7 @@
             Sign in
           </router-link>
           <router-link
-            to="/register"
+            to="/login"
             class="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-md hover:shadow-lg transition-all"
           >
             Get started
@@ -42,7 +42,7 @@
       </p>
       <div class="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
         <router-link
-          to="/register"
+          to="/login"
           class="w-full sm:w-auto px-7 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-lg hover:shadow-xl transition-all"
         >
           Get started — it's free
@@ -115,7 +115,7 @@
           Set up your first board in under a minute and start tracking today.
         </p>
         <router-link
-          to="/register"
+          to="/login"
           class="inline-block mt-8 px-8 py-3.5 text-base font-semibold text-indigo-600 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all"
         >
           Create your account
@@ -130,7 +130,7 @@
         <span>Personal time tracking &amp; task management.</span>
         <div class="flex gap-4">
           <router-link to="/login" class="hover:text-indigo-600 transition-colors">Sign in</router-link>
-          <router-link to="/register" class="hover:text-indigo-600 transition-colors">Get started</router-link>
+          <router-link to="/login" class="hover:text-indigo-600 transition-colors">Get started</router-link>
         </div>
       </div>
     </footer>

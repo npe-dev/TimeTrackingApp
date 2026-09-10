@@ -42,10 +42,6 @@
         </button>
       </form>
 
-      <p class="text-center text-sm text-gray-500 mt-6">
-        Don't have an account?
-        <router-link to="/register" class="text-indigo-600 font-semibold hover:underline">Register</router-link>
-      </p>
     </div>
   </div>
 </template>

@@ -145,7 +145,7 @@ import { useAuth } from '@/composables/useAuth';
 import { useBackground } from '@/composables/useBackground';
 import { useBoard } from '@/composables/useBoard';
 
-const { user, logout } = useAuth();
+const { user, fetchUser, logout } = useAuth();
 const { backgroundUrl } = useBackground();
 const { boards, activeBoardId, loadBoards, setActiveBoard, createBoard } = useBoard();
 
@@ -168,19 +168,30 @@ async function startCreateBoard() {
 }
 
 onMounted(() => {
+  // Ensure the authenticated user is loaded so the header (name) and the
+  // admin-only nav link render on a fresh page load, not just after a page
+  // that fetches the user itself.
+  if (!user.value) fetchUser().catch(() => {});
+
   // A transient network blip (server restart, or an in-flight request aborted
   // by a reload/navigation) must not surface as an unhandled rejection — it
   // retries on the next navigation anyway. The header just shows "Select board".
   loadBoards().catch(() => {});
 });
 
-const navLinks = [
-  { to: '/tasks', label: 'Tasks' },
-  { to: '/timer', label: 'Timer' },
-  { to: '/reports', label: 'Reports' },
-  { to: '/settings', label: 'Settings' },
-  { to: '/automations', label: 'Automation' },
-];
+const navLinks = computed(() => {
+  const links = [
+    { to: '/tasks', label: 'Tasks' },
+    { to: '/timer', label: 'Timer' },
+    { to: '/reports', label: 'Reports' },
+    { to: '/settings', label: 'Settings' },
+    { to: '/automations', label: 'Automation' },
+  ];
+  if (user.value?.is_admin) {
+    links.push({ to: '/admin', label: 'Admin' });
+  }
+  return links;
+});
 
 const backgroundStyle = computed(() => {
   if (!backgroundUrl.value) return {};
