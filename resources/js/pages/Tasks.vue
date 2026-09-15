@@ -850,6 +850,7 @@ const board = ref(null);
 
 watch(activeBoardId, () => {
   loadBoard();
+  loadProjects(activeBoardId.value);
 });
 
 const columns = computed(() => board.value?.columns || []);
