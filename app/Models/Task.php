@@ -9,12 +9,13 @@ use Illuminate\Support\Facades\Auth;
 
 class Task extends Model
 {
-    protected $fillable = ['column_id', 'project_id', 'parent_task_id', 'title', 'description', 'due_date', 'priority', 'position', 'completed_at', 'archived_at'];
+    protected $fillable = ['column_id', 'project_id', 'parent_task_id', 'title', 'description', 'due_date', 'priority', 'position', 'completed_at', 'archived_at', 'subtasks_collapsed'];
 
     protected $casts = [
         'due_date' => 'date',
         'completed_at' => 'datetime',
         'archived_at' => 'datetime',
+        'subtasks_collapsed' => 'boolean',
     ];
 
     protected static function booted(): void

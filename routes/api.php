@@ -74,6 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/tasks/{task}/move', [TaskController::class, 'move']);
     Route::patch('/tasks/{task}/toggle-complete', [TaskController::class, 'toggleComplete']);
     Route::patch('/tasks/{task}/reorder-subtasks', [TaskController::class, 'reorderSubtasks']);
+    Route::patch('/tasks/{task}/toggle-subtasks-collapsed', [TaskController::class, 'toggleSubtasksCollapsed']);
     Route::post('/tasks/fix-positions', [TaskController::class, 'fixPositions']);
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy']);
 

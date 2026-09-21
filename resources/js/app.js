@@ -90,11 +90,11 @@ router.beforeEach(async (to, from) => {
     }
 
     if (to.meta.admin && !user?.is_admin) {
-        return { name: 'timer' };
+        return { name: 'tasks' };
     }
 
     if (to.meta.guest && user) {
-        return { name: 'timer' };
+        return { name: 'tasks' };
     }
 });
 

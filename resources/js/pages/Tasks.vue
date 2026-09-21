@@ -256,15 +256,19 @@
                         </svg>
                         {{ formatDate(task.due_date) }}
                       </span>
-                      <!-- Subtask count -->
-                      <span v-if="task.subtasks && task.subtasks.length" class="flex items-center gap-1"
+                      <!-- Subtask count (click to show/hide subtasks on the card) -->
+                      <button v-if="task.subtasks && task.subtasks.length" type="button"
+                        class="flex items-center gap-1 rounded px-1 -mx-1 hover:bg-gray-100 hover:text-gray-600 transition-colors"
                         :class="subtaskDoneCount(task) === task.subtasks.length ? 'text-green-500' : ''"
+                        :title="task.subtasks_collapsed ? 'Show subtasks' : 'Hide subtasks'"
+                        @click.stop="toggleSubtasksCollapsed(task)"
                       >
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/>
+                        <svg class="w-3 h-3 transition-transform" :class="{ '-rotate-90': task.subtasks_collapsed }"
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                         {{ subtaskDoneCount(task) }}/{{ task.subtasks.length }}
-                      </span>
+                      </button>
                       <!-- Project -->
                       <span v-if="task.project" class="truncate max-w-[100px]" :title="task.project.name">
                         {{ task.project.name }}
@@ -1597,7 +1601,18 @@ function subtaskDoneCount(task) {
 }
 
 function visibleSubtasks(task) {
+  if (task.subtasks_collapsed) return [];
   return (task.subtasks || []).filter(st => !isSubtaskDone(st));
+}
+
+async function toggleSubtasksCollapsed(task) {
+  // Optimistic toggle; the choice is persisted per-card on the server.
+  task.subtasks_collapsed = !task.subtasks_collapsed;
+  try {
+    await api.patch(`/tasks/${task.id}/toggle-subtasks-collapsed`);
+  } catch {
+    task.subtasks_collapsed = !task.subtasks_collapsed;
+  }
 }
 
 async function addSubtask() {

@@ -21,7 +21,7 @@ export function useAuth() {
         await axios.get('/sanctum/csrf-cookie', { baseURL: '/' });
         await axios.post('/login', credentials);
         await fetchUser();
-        router.push({ name: 'timer' });
+        router.push({ name: 'tasks' });
     }
 
     async function logout() {

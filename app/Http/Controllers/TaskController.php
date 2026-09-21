@@ -268,6 +268,13 @@ class TaskController extends Controller
         return $task->fresh();
     }
 
+    public function toggleSubtasksCollapsed(Task $task)
+    {
+        $task->update(['subtasks_collapsed' => ! $task->subtasks_collapsed]);
+
+        return response()->json(['subtasks_collapsed' => $task->subtasks_collapsed]);
+    }
+
     public function reorderSubtasks(Request $request, Task $task)
     {
         $ids = $request->input('subtask_ids', []);
