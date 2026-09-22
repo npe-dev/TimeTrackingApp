@@ -551,6 +551,7 @@
                 <div
                   v-else
                   @dblclick="startEditDescription"
+                  @click="onDescriptionClick"
                   class="prose prose-sm max-w-none p-3 bg-gray-50 rounded-lg min-h-[80px] cursor-text hover:bg-gray-100 transition-colors"
                   :class="{ 'text-gray-400 italic': !modalTask.description }"
                   v-html="modalTask.description ? renderMarkdown(modalTask.description) : 'Double-click to add a description...'"
@@ -1871,6 +1872,22 @@ function exitEditDescription() {
   debouncedSave();
 }
 
+// Copy button inside rendered code blocks. The description is rendered via v-html,
+// so Vue can't bind to the button directly — we delegate the click from the container.
+function onDescriptionClick(e) {
+  const btn = e.target.closest('.copy-code-btn');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const pre = btn.parentElement.querySelector('pre');
+  const code = pre ? pre.innerText : '';
+  navigator.clipboard.writeText(code).then(() => {
+    const original = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  }).catch(() => {});
+}
+
 function renderMarkdown(text) {
   if (!text) return '';
   let html = text
@@ -1878,6 +1895,14 @@ function renderMarkdown(text) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+  // Extract fenced code blocks (```lang\n...\n```) into placeholders so the rest
+  // of the pipeline (headings, lists, bold, line breaks) leaves their contents alone.
+  const codeBlocks = [];
+  html = html.replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(code.replace(/\n+$/, ''));
+    return ' CODEBLOCK' + idx + ' ';
+  });
   // Process line by line for headings
   html = html.split('\n').map(line => {
     // Headings
@@ -1911,6 +1936,16 @@ function renderMarkdown(text) {
     .replace(/(^|[^"'>=])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="text-indigo-500 hover:underline">$2</a>')
     // Line breaks (but not after block elements)
     .replace(/\n(?!<[hlu])/g, '<br>');
+  // Re-insert fenced code blocks as styled blocks with a copy button. Strip any
+  // <br> the line-break pass added directly around the placeholder so the block
+  // sits on its own line without extra gaps.
+  html = html.replace(/(?:<br>)?\s*CODEBLOCK(\d+)\s*(?:<br>)?/g, (_, i) => {
+    const code = codeBlocks[Number(i)] || '';
+    return '<div class="code-block relative my-2 rounded-lg bg-gray-800 group">' +
+      '<button type="button" class="copy-code-btn absolute top-1.5 right-1.5 text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-200 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>' +
+      '<pre class="overflow-x-auto p-3 pt-2 text-xs leading-relaxed"><code class="text-gray-100">' + code + '</code></pre>' +
+      '</div>';
+  });
   return html;
 }
 
