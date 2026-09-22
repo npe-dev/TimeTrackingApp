@@ -529,15 +529,20 @@
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <h4 class="text-sm font-semibold text-gray-600">Description</h4>
-                  <button
-                    @click="editingDescription ? exitEditDescription() : startEditDescription()"
-                    class="text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
-                    :class="editingDescription
-                      ? 'bg-indigo-100 text-indigo-700'
-                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'"
-                  >
-                    {{ editingDescription ? '✏️ Editing' : '👁️ Viewing' }}
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <span v-if="!editingDescription" class="text-xs text-gray-400">
+                      Press <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 font-mono">e</kbd> to edit
+                    </span>
+                    <button
+                      @click="editingDescription ? exitEditDescription() : startEditDescription()"
+                      class="text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
+                      :class="editingDescription
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'"
+                    >
+                      {{ editingDescription ? '✏️ Editing' : '👁️ Viewing' }}
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   v-if="editingDescription"
@@ -1749,6 +1754,15 @@ function onModalKeydown(event) {
   if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
     event.preventDefault();
     closeTaskModal();
+    return;
+  }
+  // 'e' to enter description edit mode (only when not already editing / typing)
+  if ((event.key === 'e' || event.key === 'E') && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    const tag = event.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || event.target.isContentEditable) return;
+    if (editingDescription.value) return;
+    event.preventDefault();
+    startEditDescription();
     return;
   }
   // 1-9 to toggle labels (only when not typing in an input/textarea)
