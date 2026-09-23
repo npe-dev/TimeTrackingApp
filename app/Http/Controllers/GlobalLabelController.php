@@ -15,6 +15,7 @@ class GlobalLabelController extends Controller
 
     public function store(Request $request, Board $board)
     {
+        $this->ensureBoardOwner($board);
         $maxOrder = $board->labels()->max('sort_order') ?? -1;
 
         return GlobalLabel::create([
@@ -27,6 +28,7 @@ class GlobalLabelController extends Controller
 
     public function update(Request $request, Board $board, GlobalLabel $globalLabel)
     {
+        $this->ensureBoardOwner($board);
         $globalLabel->update($request->only('name', 'color'));
 
         return $globalLabel;
@@ -34,6 +36,7 @@ class GlobalLabelController extends Controller
 
     public function destroy(Board $board, GlobalLabel $globalLabel)
     {
+        $this->ensureBoardOwner($board);
         $globalLabel->delete();
 
         return response()->json(['success' => true]);
@@ -41,6 +44,7 @@ class GlobalLabelController extends Controller
 
     public function reorder(Request $request, Board $board)
     {
+        $this->ensureBoardOwner($board);
         $labelIds = $request->input('labelIds', []);
         foreach ($labelIds as $index => $id) {
             GlobalLabel::where('id', $id)->where('board_id', $board->id)->update(['sort_order' => $index]);

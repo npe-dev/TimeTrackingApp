@@ -81,6 +81,7 @@ class ReportSettingController extends Controller
     /** Toggle a single board's opt-in for the report. */
     public function toggleBoard(Request $request, Board $board)
     {
+        $this->ensureBoardOwner($board);
         $board->update(['report_enabled' => ! $board->report_enabled]);
 
         return response()->json(['success' => true, 'report_enabled' => $board->report_enabled]);
@@ -89,12 +90,15 @@ class ReportSettingController extends Controller
     /** Build the report for a board and return its data (UI preview). */
     public function preview(Request $request, Board $board)
     {
+        $this->ensureBoardOwner($board);
+
         return response()->json(ReportService::buildBoardReport($board));
     }
 
     /** Send the report for a board immediately (test), even if empty. */
     public function sendNow(Request $request, Board $board)
     {
+        $this->ensureBoardOwner($board);
         $sent = ReportService::sendForBoard($board, null, force: true);
 
         return response()->json([

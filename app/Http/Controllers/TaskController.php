@@ -140,8 +140,11 @@ class TaskController extends Controller
             'position' => $request->position,
         ]);
 
-        // Update running timer if exists
+        // Keep the acting user's own running timer in sync with the task. Scope to
+        // the current user so editing a shared-board task can't rewrite another
+        // member's running entry.
         $task->timeEntries()
+            ->where('user_id', $request->user()->id)
             ->whereNull('end_time')
             ->update([
                 'description' => $request->title,

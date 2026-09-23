@@ -10,9 +10,14 @@ class AutomationController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Automation::query();
+        // Automations are an owner-only feature. Restrict to boards the user owns
+        // (a shared board's automations belong to its owner, not its members).
         if ($request->board_id) {
-            $query->where('board_id', $request->board_id);
+            $this->ensureBoardOwner(Board::findOrFail($request->board_id));
+            $query = Automation::where('board_id', $request->board_id);
+        } else {
+            $ownedBoardIds = Board::where('user_id', $request->user()->id)->pluck('id');
+            $query = Automation::whereIn('board_id', $ownedBoardIds);
         }
 
         return $query->orderByDesc('created_at')->get()->map(fn ($a) => $this->formatAutomation($a));
@@ -20,18 +25,23 @@ class AutomationController extends Controller
 
     public function show(Automation $automation)
     {
+        $this->ensureBoardOwner($automation->board);
+
         return $this->formatAutomation($automation);
     }
 
     public function runs(Automation $automation)
     {
+        $this->ensureBoardOwner($automation->board);
+
         return $automation->runs()->limit(100)->get(['id', 'status', 'message', 'created_at']);
     }
 
     public function store(Request $request)
     {
-        // 404s (via the owner global scope) if the board isn't the user's.
-        Board::findOrFail($request->board_id);
+        // 404s (via the ownership scope) if the board isn't accessible; then
+        // require ownership — only the owner manages a board's automations.
+        $this->ensureBoardOwner(Board::findOrFail($request->board_id));
 
         $trigger = $request->input('trigger', []);
 
@@ -48,8 +58,9 @@ class AutomationController extends Controller
 
     public function update(Request $request, Automation $automation)
     {
-        // 404s (via the owner global scope) if the target board isn't the user's.
-        Board::findOrFail($request->board_id);
+        // Require ownership of both the automation's current board and the target.
+        $this->ensureBoardOwner($automation->board);
+        $this->ensureBoardOwner(Board::findOrFail($request->board_id));
 
         $trigger = $request->input('trigger', []);
 
@@ -77,6 +88,7 @@ class AutomationController extends Controller
 
     public function destroy(Automation $automation)
     {
+        $this->ensureBoardOwner($automation->board);
         $automation->delete();
 
         return response()->json(['success' => true]);
@@ -84,6 +96,7 @@ class AutomationController extends Controller
 
     public function toggle(Automation $automation)
     {
+        $this->ensureBoardOwner($automation->board);
         $automation->update(['enabled' => ! $automation->enabled]);
 
         return response()->json(['success' => true, 'enabled' => $automation->enabled]);

@@ -48,9 +48,11 @@
 
 <script setup>
 import { ref, reactive } from 'vue';
+import { useRoute } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 
 const { login } = useAuth();
+const route = useRoute();
 
 const form = reactive({ email: '', password: '' });
 const error = ref('');
@@ -60,7 +62,8 @@ async function handleLogin() {
   error.value = '';
   loading.value = true;
   try {
-    await login(form);
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null;
+    await login(form, redirect);
   } catch (e) {
     error.value = e.response?.data?.message || 'Invalid credentials';
   }

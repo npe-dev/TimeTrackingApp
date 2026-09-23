@@ -26,9 +26,9 @@ class ProjectController extends Controller
             'color' => 'nullable|string',
         ]);
 
-        // 404s (via the owner global scope) if the board isn't the user's,
-        // which also validates existence.
-        Board::findOrFail($validated['board_id']);
+        // 404s (via the owner global scope) if the board isn't accessible;
+        // then require ownership — members can read projects but not manage them.
+        $this->ensureBoardOwner(Board::findOrFail($validated['board_id']));
 
         $project = Project::create([
             'board_id' => $validated['board_id'],
@@ -41,6 +41,11 @@ class ProjectController extends Controller
 
     public function update(Request $request, Project $project)
     {
+        // Null-board (legacy/global) projects are only ever visible to their own
+        // owner, so no board-owner check is needed for those.
+        if ($project->board) {
+            $this->ensureBoardOwner($project->board);
+        }
         $project->update($request->only('name', 'color'));
 
         return $project;
@@ -48,6 +53,9 @@ class ProjectController extends Controller
 
     public function destroy(Project $project)
     {
+        if ($project->board) {
+            $this->ensureBoardOwner($project->board);
+        }
         $project->delete();
 
         return response()->json(['success' => true]);

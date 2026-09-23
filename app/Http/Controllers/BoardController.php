@@ -37,6 +37,7 @@ class BoardController extends Controller
 
     public function update(Request $request, Board $board)
     {
+        $this->ensureBoardOwner($board);
         $board->update($request->only('name', 'description'));
 
         return $board;
@@ -44,6 +45,7 @@ class BoardController extends Controller
 
     public function destroy(Board $board)
     {
+        $this->ensureBoardOwner($board);
         foreach ($this->extensions as $ext) {
             Storage::disk('public')->delete("backgrounds/board-{$board->id}.{$ext}");
         }
@@ -70,6 +72,7 @@ class BoardController extends Controller
 
     public function uploadBackground(Request $request, Board $board)
     {
+        $this->ensureBoardOwner($board);
         $request->validate(['background' => 'required|image|max:40960']);
         $file = $request->file('background');
         $ext = strtolower($file->getClientOriginalExtension()) ?: 'jpg';
@@ -87,6 +90,7 @@ class BoardController extends Controller
 
     public function deleteBackground(Board $board)
     {
+        $this->ensureBoardOwner($board);
         foreach ($this->extensions as $ext) {
             Storage::disk('public')->delete("backgrounds/board-{$board->id}.{$ext}");
         }

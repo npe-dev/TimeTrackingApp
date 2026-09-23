@@ -1919,6 +1919,9 @@ function renderMarkdown(text) {
   });
   // Process line by line for headings
   html = html.split('\n').map(line => {
+    // Horizontal rule: a line of three or more dashes. Emitted as <hr> which
+    // starts with "<h", so the later line-break pass won't prepend a stray <br>.
+    if (line.match(/^\s*-{3,}\s*$/)) return '<hr class="my-3 border-t border-gray-200">';
     // Headings
     if (line.match(/^### /)) return '<h3 class="text-base font-semibold text-gray-800 mt-2 mb-1">' + line.slice(4) + '</h3>';
     if (line.match(/^## /)) return '<h2 class="text-lg font-semibold text-gray-800 mt-3 mb-1">' + line.slice(3) + '</h2>';

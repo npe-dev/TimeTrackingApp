@@ -1,6 +1,12 @@
 <template>
   <AppLayout>
-    <div class="max-w-5xl mx-auto space-y-6">
+    <div v-if="!isOwner" class="max-w-5xl mx-auto">
+      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-8 text-center">
+        <h2 class="text-xl font-bold text-gray-800 mb-2">Automations are owner-only</h2>
+        <p class="text-sm text-gray-500">Only the owner of this board can manage its automations.</p>
+      </div>
+    </div>
+    <div v-else class="max-w-5xl mx-auto space-y-6">
       <!-- List View -->
       <template v-if="!showBuilder">
         <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
@@ -572,9 +578,15 @@ import { useAuth } from '@/composables/useAuth';
 import { useApi } from '@/composables/useApi';
 import { useBoard } from '@/composables/useBoard';
 
-const { fetchUser } = useAuth();
+const { user, fetchUser } = useAuth();
 const { get, post, put, del, patch } = useApi();
-const { activeBoardId } = useBoard();
+const { activeBoardId, activeBoard } = useBoard();
+
+// Automations are owner-only; a board shared with the user shows a notice.
+const isOwner = computed(() => {
+  const b = activeBoard();
+  return !b || (!!user.value && b.user_id === user.value.id);
+});
 
 // --- List View State ---
 const automations = ref([]);

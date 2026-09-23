@@ -31,7 +31,10 @@
                 class="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-left hover:bg-indigo-50 transition-colors"
                 :class="b.id === activeBoardId ? 'text-indigo-600 font-medium' : 'text-gray-700'"
               >
-                <span class="truncate">{{ b.name }}</span>
+                <span class="truncate flex items-center gap-1.5">
+                  {{ b.name }}
+                  <span v-if="!isOwned(b)" class="shrink-0 text-[10px] uppercase tracking-wide text-purple-500 bg-purple-50 rounded px-1 py-0.5">Shared</span>
+                </span>
                 <svg v-if="b.id === activeBoardId" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
@@ -44,6 +47,14 @@
             title="New board"
           >
             + New
+          </button>
+          <button
+            v-if="isOwnerActive"
+            @click="shareModalOpen = true"
+            class="shrink-0 text-sm text-indigo-500 hover:text-indigo-700 font-medium px-2 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
+            title="Share board"
+          >
+            Share
           </button>
         </div>
 
@@ -136,6 +147,13 @@
     <main class="px-4 pb-4 pt-2">
       <slot />
     </main>
+
+    <ShareBoardModal
+      v-if="shareModalOpen && activeBoardId"
+      :board-id="activeBoardId"
+      :board-name="activeBoardName"
+      @close="shareModalOpen = false"
+    />
   </div>
 </template>
 
@@ -144,6 +162,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useAuth } from '@/composables/useAuth';
 import { useBackground } from '@/composables/useBackground';
 import { useBoard } from '@/composables/useBoard';
+import ShareBoardModal from '@/components/ShareBoardModal.vue';
 
 const { user, fetchUser, logout } = useAuth();
 const { backgroundUrl } = useBackground();
@@ -151,9 +170,19 @@ const { boards, activeBoardId, loadBoards, setActiveBoard, createBoard } = useBo
 
 const boardMenuOpen = ref(false);
 const mobileMenuOpen = ref(false);
+const shareModalOpen = ref(false);
 
 const activeBoardName = computed(
   () => boards.value.find(b => b.id === activeBoardId.value)?.name || 'Select board'
+);
+
+// A board the current user owns (vs one shared with them as a member).
+function isOwned(board) {
+  return !!board && !!user.value && board.user_id === user.value.id;
+}
+
+const isOwnerActive = computed(
+  () => isOwned(boards.value.find(b => b.id === activeBoardId.value))
 );
 
 function selectBoard(id) {
@@ -184,9 +213,13 @@ const navLinks = computed(() => {
     { to: '/tasks', label: 'Tasks' },
     { to: '/timer', label: 'Timer' },
     { to: '/reports', label: 'Reports' },
-    { to: '/settings', label: 'Settings' },
-    { to: '/automations', label: 'Automation' },
   ];
+  // Settings & Automations are owner-only; hide them when the active board is
+  // one shared with the user (they're gated server-side too).
+  if (isOwnerActive.value) {
+    links.push({ to: '/settings', label: 'Settings' });
+    links.push({ to: '/automations', label: 'Automation' });
+  }
   if (user.value?.is_admin) {
     links.push({ to: '/admin', label: 'Admin' });
   }

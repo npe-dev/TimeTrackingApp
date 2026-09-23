@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Ownership;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -16,12 +17,13 @@ class Board extends Model
 
     protected static function booted(): void
     {
-        // Per-user tenancy: only the owner sees their boards. Guarded by
-        // Auth::check() so background jobs / console (report & automation
-        // runners, seeders) with no authenticated user keep full access.
+        // Per-user tenancy: a user sees boards they own plus boards shared with
+        // them (board_members). Guarded by Auth::check() so background jobs /
+        // console (report & automation runners, seeders) with no authenticated
+        // user keep full access.
         static::addGlobalScope('owner', function (Builder $query) {
             if ($userId = Auth::id()) {
-                $query->where('boards.user_id', $userId);
+                $query->whereIn('boards.id', Ownership::boardIds($userId));
             }
         });
 
@@ -56,5 +58,26 @@ class Board extends Model
     public function labels()
     {
         return $this->hasMany(GlobalLabel::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function members()
+    {
+        return $this->hasMany(BoardMember::class);
+    }
+
+    public function memberUsers()
+    {
+        return $this->belongsToMany(User::class, 'board_members')->withPivot('role')->withTimestamps();
+    }
+
+    public function invitations()
+    {
+        return $this->hasMany(BoardInvitation::class);
+    }
+
+    /** True when the given user id is the board's owner (not merely a member). */
+    public function isOwnedBy(?int $userId): bool
+    {
+        return $userId !== null && $this->user_id === $userId;
     }
 }

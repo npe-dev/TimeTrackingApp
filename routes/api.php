@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\BoardController;
+use App\Http\Controllers\BoardMemberController;
 use App\Http\Controllers\ColumnController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\GlobalLabelController;
@@ -47,6 +48,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Boards
     Route::apiResource('boards', BoardController::class);
     Route::get('/boards/{boardId}/columns', [ColumnController::class, 'index']);
+
+    // Board sharing (members + invitations). Owner-only except accept/show.
+    Route::get('/boards/{board}/members', [BoardMemberController::class, 'index']);
+    Route::post('/boards/{board}/invitations', [BoardMemberController::class, 'invite']);
+    Route::delete('/boards/{board}/members/{user}', [BoardMemberController::class, 'revoke']);
+    Route::delete('/boards/{board}/invitations/{invitation}', [BoardMemberController::class, 'cancelInvitation']);
+    Route::get('/invitations/{token}', [BoardMemberController::class, 'showInvitation']);
+    Route::post('/invitations/{token}/accept', [BoardMemberController::class, 'accept']);
 
     // Per-board labels
     Route::get('/boards/{board}/labels', [GlobalLabelController::class, 'index']);

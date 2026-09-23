@@ -17,11 +17,13 @@ export function useAuth() {
         return user.value;
     }
 
-    async function login(credentials) {
+    async function login(credentials, redirect = null) {
         await axios.get('/sanctum/csrf-cookie', { baseURL: '/' });
         await axios.post('/login', credentials);
         await fetchUser();
-        router.push({ name: 'tasks' });
+        // Honor a post-login redirect (e.g. an invitation accept link that
+        // bounced through login), falling back to the Tasks page.
+        router.push(redirect || { name: 'tasks' });
     }
 
     async function logout() {

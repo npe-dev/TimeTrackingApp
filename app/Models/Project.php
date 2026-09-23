@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Ownership;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -12,9 +13,16 @@ class Project extends Model
 
     protected static function booted(): void
     {
+        // Members of a shared board must see that board's projects, so scope by
+        // accessible board (owned ∪ shared). Keep matching the user's own
+        // projects too, so a project with a null board_id (legacy/global) stays
+        // visible to its owner.
         static::addGlobalScope('owner', function (Builder $query) {
             if ($userId = Auth::id()) {
-                $query->where('projects.user_id', $userId);
+                $query->where(function (Builder $q) use ($userId) {
+                    $q->whereIn('projects.board_id', Ownership::boardIds($userId))
+                        ->orWhere('projects.user_id', $userId);
+                });
             }
         });
 

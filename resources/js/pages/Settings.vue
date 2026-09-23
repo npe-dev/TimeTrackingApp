@@ -1,6 +1,12 @@
 <template>
   <AppLayout>
-    <div class="max-w-3xl mx-auto space-y-6">
+    <div v-if="!isOwner" class="max-w-3xl mx-auto">
+      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-8 text-center">
+        <h2 class="text-xl font-bold text-gray-800 mb-2">Settings are owner-only</h2>
+        <p class="text-sm text-gray-500">Only the owner of this board can manage its settings.</p>
+      </div>
+    </div>
+    <div v-else class="max-w-3xl mx-auto space-y-6">
 
       <!-- Board -->
       <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
@@ -345,15 +351,24 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useApi } from '@/composables/useApi';
+import { useAuth } from '@/composables/useAuth';
 import { useBoard } from '@/composables/useBoard';
 import { useBackground } from '@/composables/useBackground';
 import { useProjects } from '@/composables/useProjects';
 
 const api = useApi();
+const { user } = useAuth();
 const { activeBoardId, activeBoard, updateBoard, deleteBoard, boards } = useBoard();
+
+// Board settings are owner-only. When no board is active yet, don't lock the
+// page (nothing to manage) — treat it as owner so the empty state still shows.
+const isOwner = computed(() => {
+  const b = activeBoard();
+  return !b || (!!user.value && b.user_id === user.value.id);
+});
 const { loadBoardBackground, setBackground, clearBoardCache } = useBackground();
 const { projects, loadProjects, createProject, updateProject, deleteProject } = useProjects();
 

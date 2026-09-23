@@ -61,6 +61,12 @@ const routes = [
         meta: { auth: true },
     },
     {
+        path: '/invite/:token',
+        name: 'invite-accept',
+        component: () => import('./pages/InviteAccept.vue'),
+        meta: { auth: true },
+    },
+    {
         path: '/admin',
         name: 'admin',
         component: () => import('./pages/Admin.vue'),
@@ -86,7 +92,9 @@ router.beforeEach(async (to, from) => {
     }
 
     if (to.meta.auth && !user) {
-        return { name: 'login' };
+        // Preserve where the user was headed (e.g. an invitation link) so we can
+        // send them back there after they sign in.
+        return { name: 'login', query: { redirect: to.fullPath } };
     }
 
     if (to.meta.admin && !user?.is_admin) {

@@ -120,13 +120,16 @@ class TimeEntryController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function taskEntries($taskId)
+    public function taskEntries(Request $request, $taskId)
     {
         $task = Task::findOrFail($taskId);
         $subtaskIds = $task->subtasks()->pluck('id')->toArray();
         $allIds = array_merge([(int) $taskId], $subtaskIds);
 
+        // Only the viewer's own entries — on a shared board each user sees only
+        // the time they tracked on the card.
         $entries = TimeEntry::with(['project', 'task.project'])
+            ->where('user_id', $request->user()->id)
             ->whereIn('task_id', $allIds)
             ->orderByDesc('start_time')
             ->get();
