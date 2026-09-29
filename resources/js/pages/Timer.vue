@@ -115,14 +115,14 @@
           />
           <span
             class="w-3 h-3 rounded-full flex-shrink-0"
-            :style="{ backgroundColor: getProjectById(entry.project_id)?.color || '#d1d5db' }"
+            :style="{ backgroundColor: entry.project_color || getProjectById(entry.project_id)?.color || '#d1d5db' }"
           ></span>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-gray-800 truncate">
               {{ entry.description || entry.task_title || 'No description' }}
             </p>
             <p class="text-xs text-gray-400">
-              {{ getProjectById(entry.project_id)?.name || 'No project' }}
+              {{ entry.project_name || getProjectById(entry.project_id)?.name || 'No project' }}
             </p>
           </div>
           <span class="hidden sm:inline text-xs text-gray-400 whitespace-nowrap">

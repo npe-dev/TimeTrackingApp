@@ -140,16 +140,25 @@ class TaskController extends Controller
             'position' => $request->position,
         ]);
 
-        // Keep the acting user's own running timer in sync with the task. Scope to
-        // the current user so editing a shared-board task can't rewrite another
-        // member's running entry.
+        // Keep the acting user's own running timer's description in sync with the
+        // task. Scope to the current user so editing a shared-board task can't
+        // rewrite another member's running entry.
         $task->timeEntries()
             ->where('user_id', $request->user()->id)
             ->whereNull('end_time')
             ->update([
                 'description' => $request->title,
+            ]);
+
+        // project_id is a task-level attribute, so when it changes, re-point every
+        // entry logged against this task (finished and across all users) to the new
+        // project. Without this, entries keep the stale/null project_id snapshot
+        // they were created with and show blank in the Times list.
+        if (($oldTask['project_id'] ?? null) !== ($request->project_id ?? null)) {
+            $task->timeEntries()->update([
                 'project_id' => $request->project_id,
             ]);
+        }
 
         $task->load('project');
         $result = $task->toArray();
