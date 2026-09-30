@@ -89,7 +89,7 @@ class McpServer
             ],
             [
                 'name' => 'start_timer',
-                'description' => 'Start a time entry. Provide a project_id, or a task_id (its project, or the board default, is used).',
+                'description' => 'Start a time entry. Provide a project_id, or a task_id (its project, or its parent task\'s, is used; a card with no project logs with no project).',
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
@@ -125,7 +125,7 @@ class McpServer
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'board_id' => ['type' => 'integer', 'description' => 'Only entries whose project belongs to this board.'],
+                        'board_id' => ['type' => 'integer', 'description' => 'Only entries belonging to this board (via their project, or their card when they have no project).'],
                         'project_id' => ['type' => 'integer', 'description' => 'Only entries for this project.'],
                         'task_id' => ['type' => 'integer', 'description' => 'Only entries for this task (its own subtasks are NOT included).'],
                         'start_date' => ['type' => 'string', 'description' => 'Inclusive lower bound on the entry start date (YYYY-MM-DD).'],
@@ -140,7 +140,7 @@ class McpServer
                 'inputSchema' => [
                     'type' => 'object',
                     'properties' => [
-                        'board_id' => ['type' => 'integer', 'description' => 'Only summarise entries whose project belongs to this board.'],
+                        'board_id' => ['type' => 'integer', 'description' => 'Only summarise entries belonging to this board (via their project, or their card when they have no project).'],
                         'start_date' => ['type' => 'string', 'description' => 'Inclusive lower bound on the entry start date (YYYY-MM-DD).'],
                         'end_date' => ['type' => 'string', 'description' => 'Inclusive upper bound on the entry start date (YYYY-MM-DD).'],
                     ],
@@ -454,14 +454,14 @@ class McpServer
      */
     private function listTimeEntries(array $args, User $user): array
     {
-        $query = TimeEntry::with(['project.board', 'task'])
+        $query = TimeEntry::with(['project.board', 'task.column.board'])
             ->where('user_id', $user->id)
             ->whereNotNull('end_time')
             ->orderByDesc('start_time');
 
         if (isset($args['board_id'])) {
             $boardId = (int) $args['board_id'];
-            $query->whereHas('project', fn ($q) => $q->where('board_id', $boardId));
+            $query->forBoard($boardId);
         }
         if (isset($args['project_id'])) {
             $query->where('project_id', (int) $args['project_id']);
@@ -494,7 +494,7 @@ class McpServer
 
         if (isset($args['board_id'])) {
             $boardId = (int) $args['board_id'];
-            $query->whereHas('project', fn ($q) => $q->where('board_id', $boardId));
+            $query->forBoard($boardId);
         }
         if (! empty($args['start_date'])) {
             $query->whereDate('start_time', '>=', $args['start_date']);
@@ -594,8 +594,8 @@ class McpServer
             'id' => $e->id,
             'project_id' => $e->project_id,
             'project' => $e->project?->name,
-            'board_id' => $e->project?->board_id,
-            'board' => $e->project?->board?->name,
+            'board_id' => $e->boardId(),
+            'board' => $e->project?->board?->name ?? $e->task?->column?->board?->name,
             'task_id' => $e->task_id,
             'task' => $e->task?->title,
             'description' => $e->description,

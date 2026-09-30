@@ -88,18 +88,40 @@ class BoardScopingTest extends TestCase
             ->assertJsonPath('board_id', $board->id);
     }
 
-    public function test_task_timer_without_project_falls_back_to_board_default(): void
+    public function test_task_timer_without_project_logs_no_project_but_stays_on_the_board(): void
     {
         $user = User::factory()->create();
         $board = Board::create(['name' => 'Work', 'user_id' => $user->id]);
-        $project = Project::create(['board_id' => $board->id, 'name' => 'General', 'user_id' => $user->id]);
+        $other = Board::create(['name' => 'Other', 'user_id' => $user->id]);
+        Project::create(['board_id' => $board->id, 'name' => 'Aaa', 'user_id' => $user->id]);
         $column = Column::create(['board_id' => $board->id, 'name' => 'To Do', 'position' => 0]);
         $task = Task::create(['column_id' => $column->id, 'title' => 'Do it', 'position' => 0]);
 
         $this->actingAs($user)
             ->postJson('/api/entries/start', ['task_id' => $task->id])
             ->assertSuccessful()
-            ->assertJsonPath('project_id', $project->id);
+            ->assertJsonPath('project_id', null)
+            ->assertJsonPath('project_name', null)
+            ->assertJsonPath('board_id', $board->id);
+
+        $this->actingAs($user)->postJson('/api/entries/stop')->assertSuccessful();
+
+        $this->actingAs($user)->getJson("/api/entries?board_id={$board->id}")->assertJsonCount(1);
+        $this->actingAs($user)->getJson("/api/entries?board_id={$other->id}")->assertJsonCount(0);
+        $this->actingAs($user)->getJson("/api/reports/summary?board_id={$board->id}")
+            ->assertJsonPath('total_entries', 1)
+            ->assertJsonPath('by_project.0.name', null);
+        $this->actingAs($user)->getJson("/api/reports/summary?board_id={$other->id}")
+            ->assertJsonPath('total_entries', 0);
+    }
+
+    public function test_timer_without_task_or_project_is_rejected(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson('/api/entries/start', [])
+            ->assertStatus(422);
     }
 
     public function test_orphaned_entry_still_appears_under_its_tasks_board(): void

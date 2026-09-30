@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Column;
 use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Services\AutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -158,6 +159,11 @@ class TaskController extends Controller
             $task->timeEntries()->update([
                 'project_id' => $request->project_id,
             ]);
+
+            // Subtasks without a project of their own inherit the parent's, so their
+            // entries follow the parent's project too.
+            TimeEntry::whereIn('task_id', $task->subtasks()->reorder()->whereNull('project_id')->select('id'))
+                ->update(['project_id' => $request->project_id]);
         }
 
         $task->load('project');

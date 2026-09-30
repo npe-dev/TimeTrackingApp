@@ -15,12 +15,18 @@ class ReportController extends Controller
         $boardId = $request->board_id;
         $projectId = $request->project_id;
 
+        // Entries without a project belong to their card's board (see TimeEntry::scopeForBoard).
+        $boardScope = fn ($q, $boardId) => $q->where(fn ($q) => $q->where('p.board_id', $boardId)
+            ->orWhere(fn ($q) => $q->whereNull('e.project_id')->where('c.board_id', $boardId)));
+
         $minutesExpr = "SUM(CASE WHEN e.end_time IS NULL THEN (julianday('now', 'localtime') - julianday(e.start_time)) * 24 * 60 ELSE (julianday(e.end_time) - julianday(e.start_time)) * 24 * 60 END)";
 
         $byProject = DB::table('time_entries as e')
             ->leftJoin('projects as p', 'e.project_id', '=', 'p.id')
+            ->leftJoin('tasks as t', 'e.task_id', '=', 't.id')
+            ->leftJoin('columns as c', 't.column_id', '=', 'c.id')
             ->where('e.user_id', $userId)
-            ->when($boardId, fn ($q) => $q->where('p.board_id', $boardId))
+            ->when($boardId, fn ($q) => $boardScope($q, $boardId))
             ->when($projectId, fn ($q) => $q->where('e.project_id', $projectId))
             ->when($startDate && $endDate, fn ($q) => $q->whereDate('e.start_time', '>=', $startDate)->whereDate('e.start_time', '<=', $endDate))
             ->select(
@@ -34,8 +40,10 @@ class ReportController extends Controller
 
         $byDay = DB::table('time_entries as e')
             ->leftJoin('projects as p', 'e.project_id', '=', 'p.id')
+            ->leftJoin('tasks as t', 'e.task_id', '=', 't.id')
+            ->leftJoin('columns as c', 't.column_id', '=', 'c.id')
             ->where('e.user_id', $userId)
-            ->when($boardId, fn ($q) => $q->where('p.board_id', $boardId))
+            ->when($boardId, fn ($q) => $boardScope($q, $boardId))
             ->when($projectId, fn ($q) => $q->where('e.project_id', $projectId))
             ->when($startDate && $endDate, fn ($q) => $q->whereDate('e.start_time', '>=', $startDate)->whereDate('e.start_time', '<=', $endDate))
             ->select(

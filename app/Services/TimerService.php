@@ -11,19 +11,21 @@ use Illuminate\Validation\ValidationException;
 class TimerService
 {
     /**
-     * Start a timer for the given user. A timer always belongs to a board via its
-     * project: when starting from a task without an explicit project, fall back to
-     * the task's own project or the task's board default project ("General").
+     * Start a timer for the given user. When starting from a task without an
+     * explicit project, use the task's own project, then its parent's (subtasks
+     * inherit the parent's project unless they set their own). A card with no
+     * project logs with no project; the entry still belongs to the card's board
+     * through its column (see TimeEntry::scopeForBoard).
      */
     public static function start(User $user, ?int $projectId, ?int $taskId, string $description = ''): TimeEntry
     {
         if (! $projectId && $taskId) {
-            $task = Task::with('column.board')->find($taskId);
-            $projectId = $task?->project_id
-                ?? $task?->column?->board?->projects()->orderBy('id')->value('id');
+            $task = Task::with('parentTask')->find($taskId);
+            $projectId = $task?->project_id ?? $task?->parentTask?->project_id;
         }
 
-        if (! $projectId) {
+        // Without a task there's nothing to tie the entry to a board.
+        if (! $projectId && ! $taskId) {
             throw ValidationException::withMessages([
                 'project_id' => ['A project is required to start a timer.'],
             ]);
@@ -55,7 +57,7 @@ class TimerService
 
     public static function running(User $user): ?TimeEntry
     {
-        return TimeEntry::with(['project', 'task'])
+        return TimeEntry::with(['project', 'task.column'])
             ->where('user_id', $user->id)
             ->whereNull('end_time')
             ->orderByDesc('start_time')

@@ -86,7 +86,7 @@
         <h3 class="text-lg font-bold text-gray-800 mb-4">Time by Project</h3>
         <div v-if="summary.byProject && summary.byProject.length" class="space-y-3">
           <div v-for="project in summary.byProject" :key="project.id" class="flex items-center gap-3">
-            <span class="text-sm text-gray-600 w-24 sm:w-32 truncate shrink-0">{{ project.name }}</span>
+            <span class="text-sm text-gray-600 w-24 sm:w-32 truncate shrink-0">{{ project.name || 'No project' }}</span>
             <div class="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
               <div
                 class="h-full rounded-full flex items-center px-2 transition-all duration-500"

@@ -12,7 +12,7 @@ class TimeEntryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = TimeEntry::with(['project', 'task.project'])
+        $query = TimeEntry::with(['project', 'task.project', 'task.column'])
             ->where('user_id', $request->user()->id)
             // Exclude the currently-running (open) timer; it is shown separately
             // by the live timer display, not as a completed entry in the list.
@@ -20,14 +20,7 @@ class TimeEntryController extends Controller
             ->orderByDesc('start_time');
 
         if ($request->board_id) {
-            // Match the entry's own project, but also fall back to its task's
-            // project: a deleted-and-recreated project nulls the entry's
-            // project_id (nullOnDelete) while the task keeps its link, so these
-            // orphaned entries would otherwise vanish from the board's list.
-            $query->where(function ($q) use ($request) {
-                $q->whereHas('project', fn ($p) => $p->where('board_id', $request->board_id))
-                    ->orWhereHas('task.project', fn ($p) => $p->where('board_id', $request->board_id));
-            });
+            $query->forBoard((int) $request->board_id);
         }
 
         if ($request->start_date && $request->end_date) {
@@ -151,20 +144,10 @@ class TimeEntryController extends Controller
     public function taskStart(Request $request, $taskId)
     {
         $task = Task::findOrFail($taskId);
-        $now = Carbon::now();
 
-        TimeEntry::where('user_id', $request->user()->id)
-            ->whereNull('end_time')
-            ->update(['end_time' => $now]);
-
-        $entry = TimeEntry::create([
-            'project_id' => $task->project_id,
-            'task_id' => $taskId,
-            'description' => $task->title,
-            'start_time' => $now,
-            'last_heartbeat' => $now,
-            'user_id' => $request->user()->id,
-        ]);
+        // Let TimerService resolve the project so subtasks without their own
+        // project inherit the parent's instead of logging with none.
+        $entry = TimerService::start($request->user(), null, $task->id, $task->title);
 
         return $this->formatEntry($entry->load('project'));
     }
@@ -175,7 +158,7 @@ class TimeEntryController extends Controller
             ->where('user_id', $request->user()->id);
 
         if ($request->board_id) {
-            $query->whereHas('project', fn ($q) => $q->where('board_id', $request->board_id));
+            $query->forBoard((int) $request->board_id);
         }
 
         if ($request->project_id) {
@@ -254,7 +237,7 @@ class TimeEntryController extends Controller
         $arr['project_name'] = $project?->name;
         $arr['project_color'] = $project?->color;
         $arr['task_title'] = $entry->task?->title;
-        $arr['board_id'] = $project?->board_id;
+        $arr['board_id'] = $project?->board_id ?? $entry->boardId();
 
         return $arr;
     }

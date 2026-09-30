@@ -270,8 +270,9 @@
                         {{ subtaskDoneCount(task) }}/{{ task.subtasks.length }}
                       </button>
                       <!-- Project -->
-                      <span v-if="task.project" class="truncate max-w-[100px]" :title="task.project.name">
-                        {{ task.project.name }}
+                      <!-- project_name (not the nested project object) so in-place card patches show it -->
+                      <span v-if="task.project_name" class="truncate max-w-[100px]" :title="task.project_name">
+                        {{ task.project_name }}
                       </span>
                     </div>
                     <div class="flex items-center gap-1 transition-opacity"
@@ -1510,6 +1511,9 @@ async function saveModalTask() {
     // (board + every column's tasks + labels). The PUT response is the
     // fully-updated task incl. project_name/color; labels come from the modal.
     patchBoardCard(updated);
+    // A project change re-points this task's (and inheriting subtasks') entries
+    // server-side, so refresh the shared running timer to pick it up.
+    if (runningEntry.value) await checkRunning();
   } catch (err) {
     console.error('Failed to save task:', err);
   }
