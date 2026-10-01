@@ -1921,6 +1921,27 @@ function renderMarkdown(text) {
     codeBlocks.push(code.replace(/\n+$/, ''));
     return ' CODEBLOCK' + idx + ' ';
   });
+  // Extract inline code and links into placeholders before block/inline formatting,
+  // so URLs get linked wherever they appear (list items, headings, checkboxes) and
+  // characters like * or _ inside URLs aren't mangled by the bold/italic passes.
+  const inlineCodes = [];
+  html = html.replace(/`(.+?)`/g, (_, code) => {
+    inlineCodes.push(code);
+    return '\u0000C' + (inlineCodes.length - 1) + '\u0000';
+  });
+  const links = [];
+  const linkClass = 'class="text-indigo-300 hover:underline"';
+  html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)|(https?:\/\/[^\s<"]+)/g, (_, text, url, bare) => {
+    if (bare) {
+      // Leave trailing sentence punctuation outside the link.
+      const trail = bare.match(/[.,;:!?]+$/)?.[0] || '';
+      bare = bare.slice(0, bare.length - trail.length);
+      links.push('<a href="' + bare + '" target="_blank" rel="noopener" ' + linkClass + '>' + bare + '</a>');
+      return '\u0000L' + (links.length - 1) + '\u0000' + trail;
+    }
+    links.push('<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" ' + linkClass + '>');
+    return '\u0000L' + (links.length - 1) + '\u0000' + text + '\u0000/L\u0000';
+  });
   // Process line by line for headings
   html = html.split('\n').map(line => {
     // Horizontal rule: a line of three or more dashes. Emitted as <hr> which
@@ -1949,14 +1970,12 @@ function renderMarkdown(text) {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     // Italic
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Inline code
-    .replace(/`(.+?)`/g, '<code class="bg-white/10 text-indigo-300 px-1 rounded text-xs">$1</code>')
-    // Markdown links [text](url)
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-indigo-300 hover:underline">$1</a>')
-    // Bare URLs (not already inside an href="..." or >...</a>)
-    .replace(/(^|[^"'>=])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="text-indigo-300 hover:underline">$2</a>')
     // Line breaks (but not after block elements)
-    .replace(/\n(?!<[hlu])/g, '<br>');
+    .replace(/\n(?!<[hlu])/g, '<br>')
+    // Restore links and inline code
+    .replace(/\u0000\/L\u0000/g, '</a>')
+    .replace(/\u0000L(\d+)\u0000/g, (_, i) => links[Number(i)])
+    .replace(/\u0000C(\d+)\u0000/g, (_, i) => '<code class="bg-white/10 text-indigo-300 px-1 rounded text-xs">' + inlineCodes[Number(i)] + '</code>');
   // Re-insert fenced code blocks as styled blocks with a copy button. Strip any
   // <br> the line-break pass added directly around the placeholder so the block
   // sits on its own line without extra gaps.
