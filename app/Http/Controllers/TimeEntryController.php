@@ -87,6 +87,15 @@ class TimeEntryController extends Controller
 
     public function update(Request $request, TimeEntry $entry)
     {
+        // A running timer only allows moving its start time; everything else is
+        // edited once it's stopped.
+        if ($entry->end_time === null) {
+            $request->validate(['start_time' => 'required|date|before_or_equal:now']);
+            $entry->update(['start_time' => $request->start_time]);
+
+            return $this->formatEntry($entry->load(['project', 'task.column']));
+        }
+
         $entry->update([
             'project_id' => $request->project_id,
             'description' => $request->description,

@@ -106,8 +106,12 @@
           v-for="entry in group.entries"
           :key="entry.id"
           class="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 border-b border-gray-50 last:border-0 hover:bg-indigo-50/30 transition group"
+          :class="{ 'bg-green-50/50': entry.running }"
         >
+          <!-- The running entry can't be bulk-deleted; keep the column aligned. -->
+          <span v-if="entry.running" class="w-4 flex-shrink-0"></span>
           <input
+            v-else
             type="checkbox"
             :checked="selectedIds.has(entry.id)"
             @change="toggleSelect(entry.id)"
@@ -119,6 +123,7 @@
           ></span>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-gray-800 truncate">
+              <span v-if="entry.running" class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-green-100 text-green-700 align-middle">Running</span>
               {{ entry.description || entry.task_title || 'No description' }}
             </p>
             <p class="text-xs text-gray-400">
@@ -126,7 +131,7 @@
             </p>
           </div>
           <span class="hidden sm:inline text-xs text-gray-400 whitespace-nowrap">
-            {{ formatTime(entry.start_time) }} &ndash; {{ formatTime(entry.end_time) }}
+            {{ formatTime(entry.start_time) }} &ndash; {{ entry.running ? 'now' : formatTime(entry.end_time) }}
           </span>
           <span class="text-sm font-mono font-medium text-gray-700 w-20 text-right">
             {{ formatDuration(entryDuration(entry)) }}
@@ -146,13 +151,14 @@
             <button
               @click="editEntry(entry)"
               class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition"
-              title="Edit"
+              :title="entry.running ? 'Change start time' : 'Edit'"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </button>
             <button
+              v-if="!entry.running"
               @click="confirmDeleteEntry(entry)"
               class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
               title="Delete"
@@ -175,9 +181,12 @@
           <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showManualModal = false"></div>
           <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <h3 class="text-lg font-bold text-gray-800">
-              {{ manualForm.id ? 'Edit Entry' : 'New Manual Entry' }}
+              {{ manualForm.running ? 'Edit Running Timer' : manualForm.id ? 'Edit Entry' : 'New Manual Entry' }}
             </h3>
-            <div>
+            <p v-if="manualForm.running" class="text-sm text-gray-500">
+              The timer keeps running. Only the start time can be changed; stop it to edit the rest.
+            </p>
+            <div v-if="!manualForm.running">
               <label class="block text-sm font-medium text-gray-600 mb-1">Project</label>
               <select
                 v-model="manualForm.project_id"
@@ -187,7 +196,7 @@
                 <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
               </select>
             </div>
-            <div>
+            <div v-if="!manualForm.running">
               <label class="block text-sm font-medium text-gray-600 mb-1">Description</label>
               <input
                 v-model="manualForm.description"
@@ -195,7 +204,7 @@
                 class="w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
               />
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4" :class="{ 'sm:grid-cols-2': !manualForm.running }">
               <div>
                 <label class="block text-sm font-medium text-gray-600 mb-1">Start</label>
                 <input
@@ -204,7 +213,7 @@
                   class="w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
               </div>
-              <div>
+              <div v-if="!manualForm.running">
                 <label class="block text-sm font-medium text-gray-600 mb-1">End</label>
                 <input
                   v-model="manualForm.end_time"
@@ -427,6 +436,8 @@ async function loadEntries() {
 }
 
 function entryDuration(entry) {
+  // Follows the live clock (elapsedSeconds ticks every second).
+  if (entry.running) return elapsedSeconds.value;
   if (!entry.start_time || !entry.end_time) return 0;
   return Math.floor((new Date(entry.end_time) - new Date(entry.start_time)) / 1000);
 }
@@ -459,8 +470,13 @@ function dayLabel(key) {
 }
 
 const groupedEntries = computed(() => {
+  // The API list excludes the open timer; show it too so its start time can be
+  // edited without stopping it.
+  const all = displayEntry.value
+    ? [{ ...displayEntry.value, running: true }, ...entries.value]
+    : entries.value;
   const groups = {};
-  for (const entry of entries.value) {
+  for (const entry of all) {
     const key = dateKey(entry.start_time);
     if (!groups[key]) groups[key] = { key, entries: [], total: 0 };
     groups[key].entries.push(entry);
@@ -511,6 +527,7 @@ async function bulkDelete() {
 const showManualModal = ref(false);
 const manualForm = reactive({
   id: null,
+  running: false,
   project_id: null,
   description: '',
   start_time: '',
@@ -519,6 +536,7 @@ const manualForm = reactive({
 
 function resetManualForm() {
   manualForm.id = null;
+  manualForm.running = false;
   manualForm.project_id = null;
   manualForm.description = '';
   const now = new Date();
@@ -535,6 +553,7 @@ function toLocalDatetime(d) {
 
 function editEntry(entry) {
   manualForm.id = entry.id;
+  manualForm.running = !!entry.running;
   manualForm.project_id = entry.project_id;
   manualForm.description = entry.description || '';
   manualForm.start_time = toLocalDatetime(new Date(entry.start_time));
@@ -550,6 +569,17 @@ async function saveManualEntry() {
     alert('Please enter a valid start time.');
     return;
   }
+  if (manualForm.running) {
+    if (start > new Date()) {
+      alert('Start time cannot be in the future.');
+      return;
+    }
+    await api.put(`/entries/${manualForm.id}`, { start_time: start.toISOString() });
+    showManualModal.value = false;
+    await checkRunning();
+    return;
+  }
+
   let end = null;
   if (manualForm.end_time) {
     end = new Date(manualForm.end_time);
