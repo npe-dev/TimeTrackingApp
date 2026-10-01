@@ -1,14 +1,14 @@
 <template>
-  <div class="h-screen overflow-auto bg-gradient-to-br from-indigo-500 to-purple-600" :style="backgroundStyle">
+  <div class="h-screen overflow-auto bg-gradient-to-br from-indigo-500 to-purple-600 text-gray-100 [color-scheme:dark]" :style="backgroundStyle">
     <!-- Navigation -->
-    <header class="relative z-40 bg-white/95 backdrop-blur-sm shadow-lg px-4 sm:px-6 py-3 sm:py-4">
+    <header class="relative z-40 bg-neutral-900/55 backdrop-blur-md border-b border-white/10 shadow-lg px-4 sm:px-6 py-3 sm:py-4">
       <div class="relative flex items-center gap-2">
         <!-- Board picker (top-level board switching) -->
         <div class="flex items-center gap-1 sm:gap-2 min-w-0">
           <div v-if="boards.length" class="relative min-w-0">
             <button
               @click="boardMenuOpen = !boardMenuOpen"
-              class="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 sm:px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors max-w-full"
+              class="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/10 px-2.5 sm:px-3 py-2 text-sm font-medium text-gray-100 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors max-w-full"
             >
               <span class="max-w-[8rem] sm:max-w-[12rem] truncate">{{ activeBoardName }}</span>
               <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -22,18 +22,18 @@
             <!-- Menu (always opens downward) -->
             <div
               v-if="boardMenuOpen"
-              class="absolute left-0 top-full mt-1 z-50 min-w-[12rem] sm:min-w-[14rem] max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-xl bg-white shadow-xl border border-gray-100 py-1"
+              class="absolute left-0 top-full mt-1 z-50 min-w-[12rem] sm:min-w-[14rem] max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto rounded-xl bg-neutral-800/95 backdrop-blur-md shadow-xl border border-white/10 py-1"
             >
               <button
                 v-for="b in boards"
                 :key="b.id"
                 @click="selectBoard(b.id)"
-                class="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-left hover:bg-indigo-50 transition-colors"
-                :class="b.id === activeBoardId ? 'text-indigo-600 font-medium' : 'text-gray-700'"
+                class="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-left hover:bg-white/10 transition-colors"
+                :class="b.id === activeBoardId ? 'text-indigo-300 font-medium' : 'text-gray-200'"
               >
                 <span class="truncate flex items-center gap-1.5">
                   {{ b.name }}
-                  <span v-if="!isOwned(b)" class="shrink-0 text-[10px] uppercase tracking-wide text-purple-500 bg-purple-50 rounded px-1 py-0.5">Shared</span>
+                  <span v-if="!isOwned(b)" class="shrink-0 text-[10px] uppercase tracking-wide text-purple-200 bg-purple-500/25 rounded px-1 py-0.5">Shared</span>
                 </span>
                 <svg v-if="b.id === activeBoardId" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -43,7 +43,7 @@
           </div>
           <button
             @click="startCreateBoard"
-            class="shrink-0 text-sm text-indigo-500 hover:text-indigo-700 font-medium px-2 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
+            class="shrink-0 text-sm text-gray-200 hover:text-white font-medium px-2 py-1 rounded-lg hover:bg-white/10 transition-colors"
             title="New board"
           >
             + New
@@ -51,7 +51,7 @@
           <button
             v-if="isOwnerActive"
             @click="shareModalOpen = true"
-            class="shrink-0 text-sm text-indigo-500 hover:text-indigo-700 font-medium px-2 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
+            class="shrink-0 text-sm text-gray-200 hover:text-white font-medium px-2 py-1 rounded-lg hover:bg-white/10 transition-colors"
             title="Share board"
           >
             Share
@@ -67,7 +67,7 @@
             class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
             :class="$route.path === link.to
               ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
-              : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'"
+              : 'text-gray-300 hover:bg-white/10 hover:text-white'"
           >
             {{ link.label }}
           </router-link>
@@ -78,13 +78,13 @@
           <router-link
             to="/profile"
             class="text-sm font-medium transition-colors"
-            :class="$route.path === '/profile' ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'"
+            :class="$route.path === '/profile' ? 'text-white' : 'text-gray-300 hover:text-white'"
           >
             {{ user?.name }}
           </router-link>
           <button
             @click="logout"
-            class="text-sm text-gray-400 hover:text-red-500 transition-colors px-2 py-1"
+            class="text-sm text-gray-400 hover:text-red-400 transition-colors px-2 py-1"
           >
             Logout
           </button>
@@ -93,7 +93,7 @@
         <!-- Mobile hamburger -->
         <button
           @click="mobileMenuOpen = !mobileMenuOpen"
-          class="md:hidden ml-auto shrink-0 p-2 -mr-1 rounded-lg text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
+          class="md:hidden ml-auto shrink-0 p-2 -mr-1 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
           :aria-expanded="mobileMenuOpen"
           aria-label="Toggle navigation menu"
         >
@@ -110,7 +110,7 @@
       <div v-if="mobileMenuOpen" class="md:hidden fixed inset-0 top-0 z-30" @click="mobileMenuOpen = false"></div>
       <nav
         v-if="mobileMenuOpen"
-        class="md:hidden relative z-40 mt-3 pt-3 border-t border-gray-100 flex flex-col gap-1"
+        class="md:hidden relative z-40 mt-3 pt-3 border-t border-white/10 flex flex-col gap-1"
       >
         <router-link
           v-for="link in navLinks"
@@ -120,22 +120,22 @@
           class="px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
           :class="$route.path === link.to
             ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
-            : 'text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'"
+            : 'text-gray-300 hover:bg-white/10 hover:text-white'"
         >
           {{ link.label }}
         </router-link>
-        <div class="mt-1 pt-2 border-t border-gray-100 flex items-center justify-between">
+        <div class="mt-1 pt-2 border-t border-white/10 flex items-center justify-between">
           <router-link
             to="/profile"
             @click="mobileMenuOpen = false"
             class="px-4 py-2.5 text-sm font-medium transition-colors"
-            :class="$route.path === '/profile' ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'"
+            :class="$route.path === '/profile' ? 'text-white' : 'text-gray-300 hover:text-white'"
           >
             {{ user?.name }}
           </router-link>
           <button
             @click="logout"
-            class="text-sm text-gray-400 hover:text-red-500 transition-colors px-4 py-2.5"
+            class="text-sm text-gray-400 hover:text-red-400 transition-colors px-4 py-2.5"
           >
             Logout
           </button>

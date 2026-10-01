@@ -3,9 +3,9 @@
     <div class="max-w-4xl mx-auto space-y-6">
 
       <!-- Invite a user -->
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-1">Invite a user</h3>
-        <p class="text-sm text-gray-500 mb-4">
+      <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-100 mb-1">Invite a user</h3>
+        <p class="text-sm text-gray-400 mb-4">
           Creates a member account with a temporary password. The credentials are
           emailed to them and shown here once so you can share them directly.
         </p>
@@ -15,25 +15,25 @@
             v-model="form.name"
             type="text"
             placeholder="Name"
-            class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+            class="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
           />
           <input
             v-model="form.email"
             type="email"
             placeholder="Email"
-            class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+            class="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
           />
           <div class="sm:col-span-2 flex items-center gap-2">
             <input
               v-model="form.password"
               type="text"
               placeholder="Temporary password (leave blank to auto-generate)"
-              class="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-mono focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+              class="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-mono focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
             />
             <button
               type="button"
               @click="generatePassword"
-              class="px-3 py-2.5 text-xs font-medium bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition shrink-0"
+              class="px-3 py-2.5 text-xs font-medium bg-white/15 text-gray-200 rounded-xl hover:bg-white/25 transition shrink-0"
             >
               Generate
             </button>
@@ -46,34 +46,34 @@
             >
               {{ inviting ? 'Inviting…' : 'Send invite' }}
             </button>
-            <span v-if="inviteError" class="text-sm text-red-500">{{ inviteError }}</span>
+            <span v-if="inviteError" class="text-sm text-red-400">{{ inviteError }}</span>
           </div>
         </form>
 
         <!-- Freshly created credentials (shown once) -->
-        <div v-if="created" class="mt-4 p-4 rounded-xl border border-emerald-200 bg-emerald-50">
-          <p class="text-xs font-medium text-emerald-700 mb-2">
+        <div v-if="created" class="mt-4 p-4 rounded-xl border border-emerald-400/30 bg-emerald-500/15">
+          <p class="text-xs font-medium text-emerald-300 mb-2">
             Account created for {{ created.user.name }}.
             {{ created.email_sent ? 'An invite email was sent.' : 'Email could not be sent — share these credentials manually.' }}
           </p>
           <div class="space-y-2 text-sm">
             <div class="flex items-center gap-2">
-              <span class="w-20 text-gray-500 shrink-0">Email</span>
-              <code class="flex-1 text-xs bg-white rounded-lg border border-emerald-200 px-3 py-2 break-all">{{ created.user.email }}</code>
+              <span class="w-20 text-gray-400 shrink-0">Email</span>
+              <code class="flex-1 text-xs bg-black/30 text-gray-100 rounded-lg border border-emerald-400/30 px-3 py-2 break-all">{{ created.user.email }}</code>
               <button @click="copy(created.user.email)" class="px-3 py-2 text-xs font-medium bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition shrink-0">
                 {{ copiedText === created.user.email ? 'Copied' : 'Copy' }}
               </button>
             </div>
             <div class="flex items-center gap-2">
-              <span class="w-20 text-gray-500 shrink-0">Password</span>
-              <code class="flex-1 text-xs bg-white rounded-lg border border-emerald-200 px-3 py-2 break-all">{{ created.temporary_password }}</code>
+              <span class="w-20 text-gray-400 shrink-0">Password</span>
+              <code class="flex-1 text-xs bg-black/30 text-gray-100 rounded-lg border border-emerald-400/30 px-3 py-2 break-all">{{ created.temporary_password }}</code>
               <button @click="copy(created.temporary_password)" class="px-3 py-2 text-xs font-medium bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition shrink-0">
                 {{ copiedText === created.temporary_password ? 'Copied' : 'Copy' }}
               </button>
             </div>
             <div class="flex items-center gap-2">
-              <span class="w-20 text-gray-500 shrink-0">Login URL</span>
-              <code class="flex-1 text-xs bg-white rounded-lg border border-emerald-200 px-3 py-2 break-all">{{ created.login_url }}</code>
+              <span class="w-20 text-gray-400 shrink-0">Login URL</span>
+              <code class="flex-1 text-xs bg-black/30 text-gray-100 rounded-lg border border-emerald-400/30 px-3 py-2 break-all">{{ created.login_url }}</code>
               <button @click="copy(created.login_url)" class="px-3 py-2 text-xs font-medium bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition shrink-0">
                 {{ copiedText === created.login_url ? 'Copied' : 'Copy' }}
               </button>
@@ -82,22 +82,22 @@
         </div>
       </div>
 
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+      <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h2 class="text-xl font-bold text-gray-800">Users</h2>
-            <p class="text-sm text-gray-500">All accounts in the app and when they last signed in.</p>
+            <h2 class="text-xl font-bold text-gray-100">Users</h2>
+            <p class="text-sm text-gray-400">All accounts in the app and when they last signed in.</p>
           </div>
           <span class="text-sm text-gray-400">{{ users.length }} user{{ users.length === 1 ? '' : 's' }}</span>
         </div>
 
         <div v-if="loading" class="py-10 text-center text-sm text-gray-400">Loading…</div>
-        <div v-else-if="error" class="py-10 text-center text-sm text-red-500">{{ error }}</div>
+        <div v-else-if="error" class="py-10 text-center text-sm text-red-400">{{ error }}</div>
 
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-gray-100">
+              <tr class="text-left text-xs uppercase tracking-wide text-gray-400 border-b border-white/10">
                 <th class="py-2 pr-4 font-medium">Name</th>
                 <th class="py-2 pr-4 font-medium">Email</th>
                 <th class="py-2 pr-4 font-medium">Role</th>
@@ -108,18 +108,18 @@
               <tr
                 v-for="u in users"
                 :key="u.id"
-                class="border-b border-gray-50 last:border-0 hover:bg-gray-50/60 transition-colors"
+                class="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors"
               >
-                <td class="py-2.5 pr-4 font-medium text-gray-700">{{ u.name }}</td>
-                <td class="py-2.5 pr-4 text-gray-500">{{ u.email }}</td>
+                <td class="py-2.5 pr-4 font-medium text-gray-200">{{ u.name }}</td>
+                <td class="py-2.5 pr-4 text-gray-400">{{ u.email }}</td>
                 <td class="py-2.5 pr-4">
                   <span
                     v-if="u.is_admin"
-                    class="inline-block rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5 text-xs font-medium"
+                    class="inline-block rounded-full bg-indigo-500/25 text-indigo-300 px-2 py-0.5 text-xs font-medium"
                   >Admin</span>
                   <span v-else class="text-gray-400 text-xs">Member</span>
                 </td>
-                <td class="py-2.5 pr-4 text-gray-500">
+                <td class="py-2.5 pr-4 text-gray-400">
                   <span :title="u.last_login_at ? formatFull(u.last_login_at) : ''">
                     {{ u.last_login_at ? formatRelative(u.last_login_at) : 'Never' }}
                   </span>

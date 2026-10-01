@@ -1,32 +1,32 @@
 <template>
   <AppLayout>
     <div v-if="!isOwner" class="max-w-3xl mx-auto">
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-8 text-center">
-        <h2 class="text-xl font-bold text-gray-800 mb-2">Settings are owner-only</h2>
-        <p class="text-sm text-gray-500">Only the owner of this board can manage its settings.</p>
+      <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-8 text-center">
+        <h2 class="text-xl font-bold text-gray-100 mb-2">Settings are owner-only</h2>
+        <p class="text-sm text-gray-400">Only the owner of this board can manage its settings.</p>
       </div>
     </div>
     <div v-else class="max-w-3xl mx-auto space-y-6">
 
       <!-- Board -->
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-1">Board settings</h2>
+      <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-100 mb-1">Board settings</h2>
         <p class="text-sm text-gray-400 mb-4">Settings apply to the active board: <strong>{{ activeBoard()?.name || '—' }}</strong></p>
 
         <div v-if="activeBoardId" class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-600 mb-1">Name</label>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Name</label>
             <input
               v-model="boardForm.name"
-              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+              class="w-full rounded-lg border border-white/10 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
             />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-600 mb-1">Description</label>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Description</label>
             <input
               v-model="boardForm.description"
               placeholder="Optional"
-              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+              class="w-full rounded-lg border border-white/10 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
             />
           </div>
           <div class="flex items-center gap-2">
@@ -37,11 +37,11 @@
             >
               Save
             </button>
-            <span v-if="boardSaved" class="text-xs text-green-600">Saved</span>
+            <span v-if="boardSaved" class="text-xs text-green-300">Saved</span>
             <div class="flex-1"></div>
             <button
               @click="confirmDeleteBoard"
-              class="px-4 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-all"
+              class="px-4 py-2 text-sm text-red-400 border border-red-400/30 rounded-lg hover:bg-red-500/15 transition-all"
             >
               Delete board
             </button>
@@ -51,10 +51,10 @@
       </div>
 
       <!-- Background -->
-      <div v-if="activeBoardId" class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">Background image</h3>
+      <div v-if="activeBoardId" class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-100 mb-3">Background image</h3>
         <div class="flex items-center gap-4">
-          <div class="w-32 h-20 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
+          <div class="w-32 h-20 rounded-lg overflow-hidden border border-white/10 bg-white/5 flex items-center justify-center shrink-0">
             <img v-if="boardBackgroundUrl" :src="boardBackgroundUrl" class="w-full h-full object-cover" alt="Background" />
             <span v-else class="text-xs text-gray-400">None</span>
           </div>
@@ -66,7 +66,7 @@
             <button
               v-if="boardBackgroundUrl"
               @click="removeBoardBackground"
-              class="block px-3 py-1.5 text-xs font-medium text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-all"
+              class="block px-3 py-1.5 text-xs font-medium text-red-400 border border-red-400/30 rounded-lg hover:bg-red-500/15 transition-all"
             >
               Remove
             </button>
@@ -76,8 +76,8 @@
       </div>
 
       <!-- Projects -->
-      <div v-if="activeBoardId" class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Projects</h3>
+      <div v-if="activeBoardId" class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-100 mb-4">Projects</h3>
 
         <!-- Add Project -->
         <div class="flex items-center gap-3 mb-4">
@@ -90,7 +90,7 @@
             v-model="newProject.name"
             type="text"
             placeholder="New project name"
-            class="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+            class="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
             @keyup.enter="addProject"
           />
           <button
@@ -107,7 +107,7 @@
           <div
             v-for="p in projects"
             :key="p.id"
-            class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-50 group"
+            class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/5 group"
           >
             <!-- Edit mode -->
             <template v-if="editingProjectId === p.id">
@@ -120,7 +120,7 @@
                 <input
                   v-model="editProject.name"
                   type="text"
-                  class="flex-1 min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
+                  class="flex-1 min-w-0 rounded-lg border border-white/10 bg-white/5 text-gray-100 px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none"
                   @keyup.enter="saveProject"
                   @keyup.esc="cancelEditProject"
                 />
@@ -135,7 +135,7 @@
                 </button>
                 <button
                   @click="cancelEditProject"
-                  class="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-300 border border-white/20 rounded-lg hover:bg-white/10 transition"
                 >
                   Cancel
                 </button>
@@ -146,12 +146,12 @@
             <template v-else>
               <div class="flex items-center gap-3 min-w-0">
                 <span class="w-4 h-4 rounded-full shrink-0" :style="{ backgroundColor: p.color }"></span>
-                <span class="text-sm font-medium text-gray-700 truncate">{{ p.name }}</span>
+                <span class="text-sm font-medium text-gray-200 truncate">{{ p.name }}</span>
               </div>
               <div class="row-actions flex items-center gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
                 <button
                   @click="startEditProject(p)"
-                  class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition"
+                  class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-400 hover:bg-indigo-500/15 transition"
                   title="Edit project"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,7 +160,7 @@
                 </button>
                 <button
                   @click="removeProject(p.id)"
-                  class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
+                  class="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/15 transition"
                   title="Delete project"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,9 +175,9 @@
       </div>
 
       <!-- Labels -->
-      <div v-if="activeBoardId" class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+      <div v-if="activeBoardId" class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-800">Labels</h3>
+          <h3 class="text-lg font-semibold text-gray-100">Labels</h3>
           <button
             @click="openLabelModal()"
             class="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all"
@@ -189,22 +189,22 @@
           <div
             v-for="(label, index) in labels"
             :key="label.id"
-            class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+            class="flex items-center gap-3 p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
           >
             <span class="text-xs text-gray-400 font-mono w-5 shrink-0">{{ index + 1 }}</span>
             <span class="w-4 h-4 rounded-full shrink-0" :style="{ backgroundColor: label.color }"></span>
-            <span class="text-sm font-medium text-gray-700 flex-1">{{ label.name }}</span>
+            <span class="text-sm font-medium text-gray-200 flex-1">{{ label.name }}</span>
             <div class="flex items-center gap-1">
-              <button @click="reorderLabel(index, -1)" :disabled="index === 0" class="p-1 text-gray-400 hover:text-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed">
+              <button @click="reorderLabel(index, -1)" :disabled="index === 0" class="p-1 text-gray-400 hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
               </button>
-              <button @click="reorderLabel(index, 1)" :disabled="index === labels.length - 1" class="p-1 text-gray-400 hover:text-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed">
+              <button @click="reorderLabel(index, 1)" :disabled="index === labels.length - 1" class="p-1 text-gray-400 hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
               </button>
-              <button @click="openLabelModal(label)" class="p-1 text-gray-400 hover:text-indigo-500">
+              <button @click="openLabelModal(label)" class="p-1 text-gray-400 hover:text-indigo-400">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
               </button>
-              <button @click="deleteLabel(label)" class="p-1 text-gray-400 hover:text-red-500">
+              <button @click="deleteLabel(label)" class="p-1 text-gray-400 hover:text-red-400">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
             </div>
@@ -214,12 +214,12 @@
       </div>
 
       <!-- Email Reports (global) -->
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+      <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
         <div class="flex items-center justify-between mb-1">
-          <h3 class="text-lg font-semibold text-gray-800">Email reports</h3>
+          <h3 class="text-lg font-semibold text-gray-100">Email reports</h3>
           <label class="inline-flex items-center cursor-pointer">
             <input type="checkbox" v-model="reportSettings.enabled" class="sr-only peer" />
-            <div class="relative w-11 h-6 bg-gray-200 peer-checked:bg-indigo-500 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+            <div class="relative w-11 h-6 bg-white/15 peer-checked:bg-indigo-500 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
           </label>
         </div>
         <p class="text-sm text-gray-400 mb-4">Get a scheduled email summary for each enabled board.</p>
@@ -228,38 +228,38 @@
           <!-- Schedule -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label class="block text-sm font-medium text-gray-600 mb-1">Frequency</label>
-              <select v-model="reportSettings.frequency" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Frequency</label>
+              <select v-model="reportSettings.frequency" class="w-full rounded-lg border border-white/10 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none">
                 <option value="daily">Every day</option>
                 <option value="weekdays">Weekdays only</option>
                 <option value="weekly">Weekly</option>
               </select>
             </div>
             <div v-if="reportSettings.frequency === 'weekly'">
-              <label class="block text-sm font-medium text-gray-600 mb-1">Day</label>
-              <select v-model.number="reportSettings.day_of_week" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Day</label>
+              <select v-model.number="reportSettings.day_of_week" class="w-full rounded-lg border border-white/10 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none">
                 <option v-for="d in weekdayOptions" :key="d.value" :value="d.value">{{ d.label }}</option>
               </select>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-600 mb-1">Time</label>
-              <input v-model="reportSettings.time" type="time" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none" />
+              <label class="block text-sm font-medium text-gray-300 mb-1">Time</label>
+              <input v-model="reportSettings.time" type="time" class="w-full rounded-lg border border-white/10 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none" />
             </div>
           </div>
 
           <!-- Recipient -->
           <div>
-            <label class="block text-sm font-medium text-gray-600 mb-1">Send to</label>
-            <input v-model="reportSettings.recipient_email" type="email" :placeholder="accountEmail || 'you@example.com'" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none" />
+            <label class="block text-sm font-medium text-gray-300 mb-1">Send to</label>
+            <input v-model="reportSettings.recipient_email" type="email" :placeholder="accountEmail || 'you@example.com'" class="w-full rounded-lg border border-white/10 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none" />
             <p class="text-[11px] text-gray-400 mt-1">Leave blank to use your account email ({{ accountEmail || '—' }}).</p>
           </div>
 
           <!-- Sections -->
           <div>
-            <label class="block text-sm font-medium text-gray-600 mb-2">Include in the report</label>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Include in the report</label>
             <div class="space-y-2">
-              <label v-for="s in availableSections" :key="s.key" class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                <input type="checkbox" :checked="reportSettings.sections.includes(s.key)" @change="toggleSection(s.key)" class="rounded border-gray-300 text-indigo-500 focus:ring-indigo-400" />
+              <label v-for="s in availableSections" :key="s.key" class="flex items-center gap-2 text-sm text-gray-200 cursor-pointer">
+                <input type="checkbox" :checked="reportSettings.sections.includes(s.key)" @change="toggleSection(s.key)" class="rounded border-white/20 text-indigo-400 focus:ring-indigo-400" />
                 {{ s.label }}
               </label>
             </div>
@@ -267,20 +267,20 @@
 
           <!-- Per-board opt-in -->
           <div v-if="reportBoards.length">
-            <label class="block text-sm font-medium text-gray-600 mb-2">Boards</label>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Boards</label>
             <div class="space-y-2">
-              <div v-for="b in reportBoards" :key="b.id" class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-50">
-                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer min-w-0">
-                  <input type="checkbox" :checked="b.report_enabled" @change="toggleReportBoard(b)" class="rounded border-gray-300 text-indigo-500 focus:ring-indigo-400" />
+              <div v-for="b in reportBoards" :key="b.id" class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/5">
+                <label class="flex items-center gap-2 text-sm text-gray-200 cursor-pointer min-w-0">
+                  <input type="checkbox" :checked="b.report_enabled" @change="toggleReportBoard(b)" class="rounded border-white/20 text-indigo-400 focus:ring-indigo-400" />
                   <span class="truncate font-medium">{{ b.name }}</span>
-                  <span v-if="b.last_run" class="text-[11px] shrink-0" :class="b.last_run.status === 'sent' ? 'text-green-500' : b.last_run.status === 'failed' ? 'text-red-500' : 'text-gray-400'">
+                  <span v-if="b.last_run" class="text-[11px] shrink-0" :class="b.last_run.status === 'sent' ? 'text-green-400' : b.last_run.status === 'failed' ? 'text-red-400' : 'text-gray-400'">
                     · {{ b.last_run.status }}
                   </span>
                 </label>
                 <button
                   @click="sendReportTest(b)"
                   :disabled="testingBoardId === b.id"
-                  class="px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition disabled:opacity-50 shrink-0 ml-2"
+                  class="px-3 py-1.5 text-xs font-medium text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/15 transition disabled:opacity-50 shrink-0 ml-2"
                 >
                   {{ testingBoardId === b.id ? 'Sending…' : 'Send test' }}
                 </button>
@@ -296,8 +296,8 @@
           >
             Save
           </button>
-          <span v-if="reportSaved" class="text-xs text-green-600">Saved</span>
-          <span v-if="testMessage" class="text-xs" :class="testOk ? 'text-green-600' : 'text-red-500'">{{ testMessage }}</span>
+          <span v-if="reportSaved" class="text-xs text-green-300">Saved</span>
+          <span v-if="testMessage" class="text-xs" :class="testOk ? 'text-green-300' : 'text-red-400'">{{ testMessage }}</span>
         </div>
       </div>
 
@@ -305,21 +305,21 @@
       <Teleport to="body">
         <div v-if="showLabelModal" class="fixed inset-0 z-50 flex items-center justify-center">
           <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showLabelModal = false"></div>
-          <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">{{ editingLabel ? 'Edit Label' : 'New Label' }}</h3>
+          <div class="relative bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] border border-white/10 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+            <h3 class="text-lg font-bold text-gray-100 mb-4">{{ editingLabel ? 'Edit Label' : 'New Label' }}</h3>
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-600 mb-1">Name</label>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Name</label>
                 <input
                   v-model="labelForm.name"
                   type="text"
                   placeholder="Label name"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   @keydown.enter="saveLabel"
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-600 mb-2">Color</label>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Color</label>
                 <div class="grid grid-cols-9 gap-2">
                   <button
                     v-for="color in labelColorOptions"
@@ -333,7 +333,7 @@
               </div>
             </div>
             <div class="flex justify-end gap-2 mt-6">
-              <button @click="showLabelModal = false" class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button @click="showLabelModal = false" class="px-4 py-2 text-sm font-medium text-gray-300 border border-white/20 rounded-lg hover:bg-white/10">Cancel</button>
               <button
                 @click="saveLabel"
                 :disabled="!labelForm.name.trim()"

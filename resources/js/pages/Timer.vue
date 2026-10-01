@@ -3,26 +3,26 @@
     <div class="max-w-5xl mx-auto space-y-6">
 
       <!-- Timer Section -->
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6 sm:p-8 text-center">
+      <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6 sm:p-8 text-center">
         <!-- Timer Display -->
-        <div class="text-4xl sm:text-6xl font-mono font-bold text-gray-800 mb-6 tracking-wider">
+        <div class="text-4xl sm:text-6xl font-mono font-bold text-gray-100 mb-6 tracking-wider">
           {{ formattedTimer }}
         </div>
 
         <!-- Running Info -->
         <div v-if="displayEntry" class="mb-4">
           <span
-            class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700"
+            class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium bg-green-500/15 text-green-300"
           >
             <span
               class="w-2.5 h-2.5 rounded-full"
               :style="{ backgroundColor: runningProject?.color || '#6366f1' }"
             ></span>
             {{ runningProject?.name || 'No project' }}
-            <span v-if="displayEntry.task_title" class="text-green-600">
+            <span v-if="displayEntry.task_title" class="text-green-300">
               &mdash; {{ displayEntry.task_title }}
             </span>
-            <span v-else-if="displayEntry.description" class="text-green-500">
+            <span v-else-if="displayEntry.description" class="text-green-400">
               &mdash; {{ displayEntry.description }}
             </span>
           </span>
@@ -32,7 +32,7 @@
         <div v-if="!displayEntry" class="space-y-4 max-w-md mx-auto">
           <select
             v-model="timerForm.project_id"
-            class="w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+            class="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
           >
             <option :value="null">Select project...</option>
             <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -41,7 +41,7 @@
             v-model="timerForm.description"
             type="text"
             placeholder="What are you working on?"
-            class="w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+            class="w-full rounded-xl border-white/10 bg-white/5 px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
             @keyup.enter="startTimer"
           />
         </div>
@@ -63,7 +63,7 @@
         <div class="flex items-center gap-3">
           <button
             @click="showManualModal = true; resetManualForm()"
-            class="px-4 py-2 rounded-xl bg-white/95 backdrop-blur-sm shadow text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+            class="px-4 py-2 rounded-xl bg-neutral-900/55 backdrop-blur-md border border-white/10 shadow text-sm font-medium text-gray-200 hover:bg-indigo-500/15 hover:text-indigo-300 transition"
           >
             + Manual Entry
           </button>
@@ -78,7 +78,7 @@
           </button>
           <button
             @click="exportCsv"
-            class="px-4 py-2 rounded-xl bg-white/95 backdrop-blur-sm shadow text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+            class="px-4 py-2 rounded-xl bg-neutral-900/55 backdrop-blur-md border border-white/10 shadow text-sm font-medium text-gray-200 hover:bg-indigo-500/15 hover:text-indigo-300 transition"
           >
             Export CSV
           </button>
@@ -86,27 +86,27 @@
       </div>
 
       <!-- Entries List -->
-      <div v-for="group in groupedEntries" :key="group.label" class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden">
+      <div v-for="group in groupedEntries" :key="group.label" class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg overflow-hidden">
         <!-- Day Header -->
-        <div class="flex items-center justify-between px-4 sm:px-6 py-3 bg-gray-50/80 border-b border-gray-100">
+        <div class="flex items-center justify-between px-4 sm:px-6 py-3 bg-white/5 border-b border-white/10">
           <div class="flex items-center gap-3">
             <input
               type="checkbox"
               :checked="isDaySelected(group)"
               @change="toggleDay(group)"
-              class="rounded border-gray-300 text-indigo-500 focus:ring-indigo-400"
+              class="rounded border-white/20 text-indigo-400 focus:ring-indigo-400"
             />
-            <span class="font-semibold text-gray-700 text-sm">{{ group.label }}</span>
+            <span class="font-semibold text-gray-200 text-sm">{{ group.label }}</span>
           </div>
-          <span class="text-sm font-medium text-indigo-500">{{ formatDuration(group.total) }}</span>
+          <span class="text-sm font-medium text-indigo-400">{{ formatDuration(group.total) }}</span>
         </div>
 
         <!-- Entries -->
         <div
           v-for="entry in group.entries"
           :key="entry.id"
-          class="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 border-b border-gray-50 last:border-0 hover:bg-indigo-50/30 transition group"
-          :class="{ 'bg-green-50/50': entry.running }"
+          class="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 border-b border-white/5 last:border-0 hover:bg-indigo-500/15 transition group"
+          :class="{ 'bg-green-500/15': entry.running }"
         >
           <!-- The running entry can't be bulk-deleted; keep the column aligned. -->
           <span v-if="entry.running" class="w-4 flex-shrink-0"></span>
@@ -115,15 +115,15 @@
             type="checkbox"
             :checked="selectedIds.has(entry.id)"
             @change="toggleSelect(entry.id)"
-            class="rounded border-gray-300 text-indigo-500 focus:ring-indigo-400"
+            class="rounded border-white/20 text-indigo-400 focus:ring-indigo-400"
           />
           <span
             class="w-3 h-3 rounded-full flex-shrink-0"
             :style="{ backgroundColor: entry.project_color || getProjectById(entry.project_id)?.color || '#d1d5db' }"
           ></span>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-800 truncate">
-              <span v-if="entry.running" class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-green-100 text-green-700 align-middle">Running</span>
+            <p class="text-sm font-medium text-gray-100 truncate">
+              <span v-if="entry.running" class="inline-block mr-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide bg-green-500/25 text-green-300 align-middle">Running</span>
               {{ entry.description || entry.task_title || 'No description' }}
             </p>
             <p class="text-xs text-gray-400">
@@ -133,14 +133,14 @@
           <span class="hidden sm:inline text-xs text-gray-400 whitespace-nowrap">
             {{ formatTime(entry.start_time) }} &ndash; {{ entry.running ? 'now' : formatTime(entry.end_time) }}
           </span>
-          <span class="text-sm font-mono font-medium text-gray-700 w-20 text-right">
+          <span class="text-sm font-mono font-medium text-gray-200 w-20 text-right">
             {{ formatDuration(entryDuration(entry)) }}
           </span>
           <div class="row-actions flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
             <button
               v-if="!displayEntry"
               @click="restartEntry(entry)"
-              class="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition"
+              class="p-1.5 rounded-lg text-gray-400 hover:text-green-300 hover:bg-green-500/15 transition"
               title="Start a new timer with this entry's project, task and description"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,7 +150,7 @@
             </button>
             <button
               @click="editEntry(entry)"
-              class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition"
+              class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-400 hover:bg-indigo-500/15 transition"
               :title="entry.running ? 'Change start time' : 'Edit'"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,7 +160,7 @@
             <button
               v-if="!entry.running"
               @click="confirmDeleteEntry(entry)"
-              class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
+              class="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/15 transition"
               title="Delete"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,7 +171,7 @@
         </div>
       </div>
 
-      <div v-if="groupedEntries.length === 0" class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-12 text-center">
+      <div v-if="groupedEntries.length === 0" class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-12 text-center">
         <p class="text-gray-400">No time entries yet. Start a timer or add a manual entry.</p>
       </div>
 
@@ -179,53 +179,53 @@
       <Teleport to="body">
         <div v-if="showManualModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showManualModal = false"></div>
-          <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <h3 class="text-lg font-bold text-gray-800">
+          <div class="relative bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h3 class="text-lg font-bold text-gray-100">
               {{ manualForm.running ? 'Edit Running Timer' : manualForm.id ? 'Edit Entry' : 'New Manual Entry' }}
             </h3>
-            <p v-if="manualForm.running" class="text-sm text-gray-500">
+            <p v-if="manualForm.running" class="text-sm text-gray-400">
               The timer keeps running. Only the start time can be changed; stop it to edit the rest.
             </p>
             <div v-if="!manualForm.running">
-              <label class="block text-sm font-medium text-gray-600 mb-1">Project</label>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Project</label>
               <select
                 v-model="manualForm.project_id"
-                class="w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                class="w-full rounded-xl border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
               >
                 <option :value="null">No project</option>
                 <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
               </select>
             </div>
             <div v-if="!manualForm.running">
-              <label class="block text-sm font-medium text-gray-600 mb-1">Description</label>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Description</label>
               <input
                 v-model="manualForm.description"
                 type="text"
-                class="w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                class="w-full rounded-xl border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
               />
             </div>
             <div class="grid grid-cols-1 gap-4" :class="{ 'sm:grid-cols-2': !manualForm.running }">
               <div>
-                <label class="block text-sm font-medium text-gray-600 mb-1">Start</label>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Start</label>
                 <input
                   v-model="manualForm.start_time"
                   type="datetime-local"
-                  class="w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  class="w-full rounded-xl border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
               </div>
               <div v-if="!manualForm.running">
-                <label class="block text-sm font-medium text-gray-600 mb-1">End</label>
+                <label class="block text-sm font-medium text-gray-300 mb-1">End</label>
                 <input
                   v-model="manualForm.end_time"
                   type="datetime-local"
-                  class="w-full rounded-xl border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  class="w-full rounded-xl border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
               </div>
             </div>
             <div class="flex justify-end gap-3 pt-2">
               <button
                 @click="showManualModal = false"
-                class="px-5 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
+                class="px-5 py-2 rounded-xl text-sm font-medium text-gray-300 hover:bg-white/10 transition"
               >
                 Cancel
               </button>
@@ -244,13 +244,13 @@
       <Teleport to="body">
         <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showDeleteModal = false"></div>
-          <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center space-y-4">
-            <h3 class="text-lg font-bold text-gray-800">Delete Entry?</h3>
-            <p class="text-sm text-gray-500">This action cannot be undone.</p>
+          <div class="relative bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center space-y-4">
+            <h3 class="text-lg font-bold text-gray-100">Delete Entry?</h3>
+            <p class="text-sm text-gray-400">This action cannot be undone.</p>
             <div class="flex justify-center gap-3 pt-2">
               <button
                 @click="showDeleteModal = false"
-                class="px-5 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
+                class="px-5 py-2 rounded-xl text-sm font-medium text-gray-300 hover:bg-white/10 transition"
               >
                 Cancel
               </button>
@@ -270,19 +270,19 @@
       <Teleport to="body">
         <div v-if="showIdleModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-          <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center space-y-4">
-            <div class="w-14 h-14 mx-auto rounded-full bg-amber-100 flex items-center justify-center">
-              <svg class="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="relative bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center space-y-4">
+            <div class="w-14 h-14 mx-auto rounded-full bg-amber-500/25 flex items-center justify-center">
+              <svg class="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 class="text-lg font-bold text-gray-800">Are you still working?</h3>
-            <p class="text-sm text-gray-500">
+            <h3 class="text-lg font-bold text-gray-100">Are you still working?</h3>
+            <p class="text-sm text-gray-400">
               No activity detected for 5 minutes. Timer will auto-stop in
-              <span class="font-semibold text-amber-600">{{ idleCountdown }}s</span>.
+              <span class="font-semibold text-amber-300">{{ idleCountdown }}s</span>.
             </p>
             <!-- Progress bar -->
-            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div class="w-full bg-white/15 rounded-full h-2 overflow-hidden">
               <div
                 class="h-full bg-gradient-to-r from-amber-400 to-red-500 transition-all duration-1000 ease-linear rounded-full"
                 :style="{ width: (idleCountdown / 120) * 100 + '%' }"

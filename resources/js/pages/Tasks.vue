@@ -3,16 +3,16 @@
     <div class="max-w-full mx-auto px-2">
 
       <!-- Board Selector -->
-      <div class="relative z-30 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg px-6 py-4 mb-4 flex items-center justify-between">
+      <div class="relative z-30 bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg px-6 py-4 mb-4 flex items-center justify-between">
         <div class="flex items-center gap-4">
-          <h2 class="text-lg font-semibold text-gray-800">{{ board?.name || 'No board' }}</h2>
+          <h2 class="text-lg font-semibold text-white">{{ board?.name || 'No board' }}</h2>
         </div>
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-1 relative filter-panel-container">
             <button
               @click="toggleFilterPanel"
               class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors"
-              :class="hasActiveFilters ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'"
+              :class="hasActiveFilters ? 'bg-indigo-500/25 text-indigo-200' : 'text-gray-300 hover:bg-white/10 hover:text-white'"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -23,7 +23,7 @@
             <button
               v-if="hasActiveFilters"
               @click.stop="clearFilters"
-              class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+              class="p-1 text-gray-400 hover:text-red-400 transition-colors"
               title="Clear all filters"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -32,7 +32,7 @@
             <!-- Filter Panel -->
             <div
               v-if="showFilterPanel"
-              class="absolute right-0 top-10 z-50 bg-white rounded-xl shadow-2xl border border-gray-100 w-72 max-h-[70vh] overflow-y-auto"
+              class="absolute right-0 top-10 z-50 bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] rounded-xl shadow-2xl border border-white/10 w-72 max-h-[70vh] overflow-y-auto"
             >
               <div class="p-3 space-y-3">
                 <!-- Search -->
@@ -42,7 +42,7 @@
                     v-model="filterSearch"
                     @keydown="onFilterKeydown"
                     placeholder="Search cards... (press / to focus)"
-                    class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+                    class="w-full rounded-lg border border-white/10 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
                   />
                 </div>
 
@@ -53,15 +53,15 @@
                     v-for="ml in matchedLabels"
                     :key="ml.id"
                     @click="toggleFilterLabel(ml.id)"
-                    class="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-50 text-left text-xs"
+                    class="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white/10 text-left text-xs"
                   >
                     <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: ml.color }"></span>
                     <span class="flex-1">{{ ml.name }}</span>
-                    <span v-if="filterLabelIds.includes(ml.id)" class="text-indigo-500">✓</span>
+                    <span v-if="filterLabelIds.includes(ml.id)" class="text-indigo-400">✓</span>
                   </button>
                 </div>
 
-                <div class="border-t border-gray-100"></div>
+                <div class="border-t border-white/10"></div>
 
                 <!-- Due Date Filters -->
                 <div>
@@ -72,15 +72,15 @@
                       :key="opt.value"
                       @click="toggleDueDateFilter(opt.value)"
                       class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors"
-                      :class="filterDueDate === opt.value ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-gray-50 text-gray-600'"
+                      :class="filterDueDate === opt.value ? 'bg-indigo-500/15 text-indigo-300' : 'hover:bg-white/10 text-gray-300'"
                     >
                       <span class="flex-1">{{ opt.label }}</span>
-                      <span v-if="filterDueDate === opt.value" class="text-indigo-500">✓</span>
+                      <span v-if="filterDueDate === opt.value" class="text-indigo-400">✓</span>
                     </button>
                   </div>
                 </div>
 
-                <div class="border-t border-gray-100"></div>
+                <div class="border-t border-white/10"></div>
 
                 <!-- Labels -->
                 <div>
@@ -91,21 +91,21 @@
                       :key="gl.id"
                       @click="toggleFilterLabel(gl.id)"
                       class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors"
-                      :class="filterLabelIds.includes(gl.id) ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-gray-50 text-gray-600'"
+                      :class="filterLabelIds.includes(gl.id) ? 'bg-indigo-500/15 text-indigo-300' : 'hover:bg-white/10 text-gray-300'"
                     >
                       <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: gl.color }"></span>
                       <span class="flex-1">{{ gl.name }}</span>
-                      <span v-if="filterLabelIds.includes(gl.id)" class="text-indigo-500">✓</span>
+                      <span v-if="filterLabelIds.includes(gl.id)" class="text-indigo-400">✓</span>
                     </button>
                     <div v-if="!globalLabels.length" class="text-xs text-gray-400 px-2 py-1">No labels</div>
                   </div>
                 </div>
 
                 <!-- Clear Filters -->
-                <div v-if="hasActiveFilters" class="border-t border-gray-100 pt-2">
+                <div v-if="hasActiveFilters" class="border-t border-white/10 pt-2">
                   <button
                     @click="clearFilters"
-                    class="w-full text-center text-xs text-red-500 hover:text-red-600 font-medium py-1"
+                    class="w-full text-center text-xs text-red-400 hover:text-red-300 font-medium py-1"
                   >
                     Clear all filters
                   </button>
@@ -141,24 +141,24 @@
           @dragover="onColumnDragOver($event, column)"
           @drop="onColumnDrop($event, column)"
         >
-          <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg flex flex-col max-h-[80vh]">
+          <div class="bg-neutral-950/70 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg flex flex-col max-h-[80vh]">
             <!-- Column Header -->
             <div
-              class="column-header px-4 py-3 flex items-center justify-between border-b border-gray-100 cursor-grab active:cursor-grabbing"
+              class="column-header px-4 py-3 flex items-center justify-between cursor-grab active:cursor-grabbing"
               :draggable="true"
               @dragstart="onColumnDragStart($event, column)"
               @dragend="onColumnDragEnd"
             >
               <div class="flex items-center gap-2">
-                <h3 class="font-semibold text-gray-700 text-sm">{{ column.name }}</h3>
-                <span class="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+                <h3 class="font-semibold text-gray-100 text-sm">{{ column.name }}</h3>
+                <span class="text-xs text-gray-400 bg-white/10 rounded-full px-2 py-0.5">
                   {{ (column.tasks || []).length }}
                 </span>
               </div>
               <div class="relative">
                 <button
                   @click="toggleColumnMenu(column.id)"
-                  class="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                  class="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <circle cx="10" cy="4" r="1.5" /><circle cx="10" cy="10" r="1.5" /><circle cx="10" cy="16" r="1.5" />
@@ -167,27 +167,27 @@
                 <!-- Column Menu -->
                 <div
                   v-if="openColumnMenu === column.id"
-                  class="absolute right-0 top-8 z-50 w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1 text-sm"
+                  class="absolute right-0 top-8 z-50 w-52 bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] rounded-xl shadow-xl border border-white/10 py-1 text-sm"
                 >
                   <button
                     @click="startRenameColumn(column)"
-                    class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-gray-700"
+                    class="w-full text-left px-4 py-2 hover:bg-indigo-500/15 text-gray-200"
                   >
                     Rename
                   </button>
-                  <div class="border-t border-gray-100 my-1"></div>
+                  <div class="border-t border-white/10 my-1"></div>
                   <div class="px-4 py-1 text-xs text-gray-400 font-medium uppercase tracking-wide">Sort by</div>
-                  <button @click="sortColumn(column.id, 'due-asc')" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-gray-700">Due date (oldest first)</button>
-                  <button @click="sortColumn(column.id, 'due-desc')" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-gray-700">Due date (newest first)</button>
-                  <button @click="sortColumn(column.id, 'created-asc')" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-gray-700">Created (oldest first)</button>
-                  <button @click="sortColumn(column.id, 'created-desc')" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-gray-700">Created (newest first)</button>
-                  <button @click="sortColumn(column.id, 'priority-desc')" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-gray-700">Priority (high &rarr; low)</button>
-                  <button @click="sortColumn(column.id, 'priority-asc')" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-gray-700">Priority (low &rarr; high)</button>
-                  <button @click="sortColumn(column.id, 'name-asc')" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-gray-700">Name (A &rarr; Z)</button>
-                  <div class="border-t border-gray-100 my-1"></div>
+                  <button @click="sortColumn(column.id, 'due-asc')" class="w-full text-left px-4 py-2 hover:bg-indigo-500/15 text-gray-200">Due date (oldest first)</button>
+                  <button @click="sortColumn(column.id, 'due-desc')" class="w-full text-left px-4 py-2 hover:bg-indigo-500/15 text-gray-200">Due date (newest first)</button>
+                  <button @click="sortColumn(column.id, 'created-asc')" class="w-full text-left px-4 py-2 hover:bg-indigo-500/15 text-gray-200">Created (oldest first)</button>
+                  <button @click="sortColumn(column.id, 'created-desc')" class="w-full text-left px-4 py-2 hover:bg-indigo-500/15 text-gray-200">Created (newest first)</button>
+                  <button @click="sortColumn(column.id, 'priority-desc')" class="w-full text-left px-4 py-2 hover:bg-indigo-500/15 text-gray-200">Priority (high &rarr; low)</button>
+                  <button @click="sortColumn(column.id, 'priority-asc')" class="w-full text-left px-4 py-2 hover:bg-indigo-500/15 text-gray-200">Priority (low &rarr; high)</button>
+                  <button @click="sortColumn(column.id, 'name-asc')" class="w-full text-left px-4 py-2 hover:bg-indigo-500/15 text-gray-200">Name (A &rarr; Z)</button>
+                  <div class="border-t border-white/10 my-1"></div>
                   <button
                     @click="confirmDeleteColumn(column)"
-                    class="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600"
+                    class="w-full text-left px-4 py-2 hover:bg-red-500/15 text-red-300"
                   >
                     Delete column
                   </button>
@@ -219,13 +219,13 @@
                   :draggable="true"
                   @dragstart="onDragStart($event, task, column.id)"
                   @dragend="onDragEnd"
-                  class="task-card bg-white rounded-lg border border-gray-200 shadow-sm p-3 cursor-move group"
+                  class="task-card bg-neutral-800/90 rounded-lg border border-white/5 shadow-sm p-3 cursor-move group"
                   :class="{ 'task-card-done': isTaskDone(task) }"
                   @click="openTaskModal(task)"
                 >
                   <!-- Card Top Row -->
                   <div class="flex items-start gap-2 mb-1 -mx-3 -mt-3 px-3 pt-3 pb-1 rounded-t-lg"
-                    :style="task.labels && task.labels.length ? { backgroundColor: task.labels[0].color + '18' } : {}"
+                    :style="task.labels && task.labels.length ? { backgroundColor: task.labels[0].color + '30' } : {}"
                   >
                     <input
                       type="checkbox"
@@ -234,7 +234,7 @@
                       @click.stop.prevent="markTaskDone(task)"
                     />
                     <h4 class="text-sm font-medium flex-1 leading-snug"
-                      :class="isTaskDone(task) ? 'line-through text-gray-400' : 'text-gray-800'"
+                      :class="isTaskDone(task) ? 'line-through text-gray-500' : 'text-gray-100'"
                     >{{ task.title }}</h4>
                     <span v-if="priorityEmoji(task.priority)" class="text-sm flex-shrink-0" :title="priorityLabel(task.priority)">
                       {{ priorityEmoji(task.priority) }}
@@ -248,7 +248,7 @@
                       <span
                         v-if="task.due_date"
                         class="flex items-center gap-1"
-                        :class="{ 'text-red-500 font-medium': isOverdue(task.due_date) }"
+                        :class="{ 'text-red-400 font-medium': isOverdue(task.due_date) }"
                       >
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -258,8 +258,8 @@
                       </span>
                       <!-- Subtask count (click to show/hide subtasks on the card) -->
                       <button v-if="task.subtasks && task.subtasks.length" type="button"
-                        class="flex items-center gap-1 rounded px-1 -mx-1 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-                        :class="subtaskDoneCount(task) === task.subtasks.length ? 'text-green-500' : ''"
+                        class="flex items-center gap-1 rounded px-1 -mx-1 hover:bg-white/10 hover:text-gray-200 transition-colors"
+                        :class="subtaskDoneCount(task) === task.subtasks.length ? 'text-green-400' : ''"
                         :title="task.subtasks_collapsed ? 'Show subtasks' : 'Hide subtasks'"
                         @click.stop="toggleSubtasksCollapsed(task)"
                       >
@@ -282,8 +282,8 @@
                         @click.stop="toggleTaskTimer(task)"
                         class="p-2 rounded-lg transition-colors"
                         :class="isTimerRunningForTask(task.id)
-                          ? 'text-red-500 hover:bg-red-50'
-                          : 'text-gray-400 hover:bg-indigo-50 hover:text-indigo-500'"
+                          ? 'text-red-400 hover:bg-red-500/15'
+                          : 'text-gray-400 hover:bg-white/10 hover:text-indigo-300'"
                         :title="isTimerRunningForTask(task.id) ? 'Stop timer' : 'Start timer'"
                       >
                         <svg v-if="!isTimerRunningForTask(task.id)" class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
@@ -300,7 +300,7 @@
                 <!-- Subtask Cards -->
                 <template v-for="subtask in visibleSubtasks(task)" :key="'sub-' + subtask.id">
                   <div
-                    class="subtask-card bg-gray-50 rounded-lg border border-gray-200 shadow-sm p-2.5 ml-6 group"
+                    class="subtask-card bg-neutral-800/70 rounded-lg border border-white/5 shadow-sm p-2.5 ml-6 group"
                   >
                     <div class="flex items-center gap-2">
                       <input
@@ -309,7 +309,7 @@
                         :checked="isSubtaskDone(subtask)"
                         @click.stop="markSubtaskDone(subtask, task)"
                       />
-                      <h4 class="text-xs font-medium text-gray-700 flex-1 leading-snug truncate">{{ subtask.title }}</h4>
+                      <h4 class="text-xs font-medium text-gray-200 flex-1 leading-snug truncate">{{ subtask.title }}</h4>
                       <div class="flex items-center gap-1 transition-opacity"
                         :class="isTimerRunningForTask(subtask.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
                       >
@@ -317,8 +317,8 @@
                           @click.stop="toggleTaskTimer(subtask)"
                           class="p-0.5 rounded transition-colors"
                           :class="isTimerRunningForTask(subtask.id)
-                            ? 'text-red-500 hover:bg-red-50'
-                            : 'text-gray-400 hover:bg-indigo-50 hover:text-indigo-500'"
+                            ? 'text-red-400 hover:bg-red-500/15'
+                            : 'text-gray-400 hover:bg-white/10 hover:text-indigo-300'"
                           :title="isTimerRunningForTask(subtask.id) ? 'Stop timer' : 'Start timer'"
                         >
                           <svg v-if="!isTimerRunningForTask(subtask.id)" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -346,14 +346,14 @@
               <!-- Empty column hint -->
               <div
                 v-if="!(column.tasks || []).length && !(dropTarget?.columnId === column.id)"
-                class="text-center text-xs text-gray-300 py-8"
+                class="text-center text-xs text-gray-500 py-8"
               >
                 Drop tasks here
               </div>
             </div>
 
             <!-- Add Task -->
-            <div class="p-2 border-t border-gray-100">
+            <div class="p-2">
               <div v-if="addingTaskColumnId === column.id" class="space-y-2">
                 <input
                   ref="newTaskInput"
@@ -361,7 +361,7 @@
                   @keydown.enter="createTask(column.id)"
                   @keydown.esc="cancelAddTask"
                   placeholder="Task title..."
-                  class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+                  class="w-full rounded-lg border border-white/10 bg-neutral-800 text-gray-100 placeholder-gray-500 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
                 />
                 <div class="flex gap-2">
                   <button
@@ -381,7 +381,7 @@
               <button
                 v-else
                 @click="startAddTask(column.id)"
-                class="w-full text-left text-sm text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg px-3 py-2 transition-colors"
+                class="w-full text-left text-sm text-gray-400 hover:text-white hover:bg-white/10 rounded-lg px-3 py-2 transition-colors"
               >
                 + Add task
               </button>
@@ -394,14 +394,14 @@
           v-if="columns.length < 5"
           class="flex-shrink-0 w-80"
         >
-          <div v-if="addingColumn" class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-4 space-y-2">
+          <div v-if="addingColumn" class="bg-neutral-950/70 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-4 space-y-2">
             <input
               ref="newColumnInput"
               v-model="newColumnName"
               @keydown.enter="createColumn"
               @keydown.esc="addingColumn = false"
               placeholder="Column name..."
-              class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+              class="w-full rounded-lg border border-white/10 bg-neutral-800 text-gray-100 placeholder-gray-500 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
             />
             <div class="flex gap-2">
               <button
@@ -421,7 +421,7 @@
           <button
             v-else
             @click="startAddColumn"
-            class="w-full bg-white/60 backdrop-blur-sm rounded-2xl shadow border-2 border-dashed border-gray-200 hover:border-indigo-300 hover:bg-white/80 text-gray-400 hover:text-indigo-500 text-sm font-medium py-10 transition-all"
+            class="w-full bg-neutral-900/40 backdrop-blur-md rounded-2xl border-2 border-dashed border-white/15 hover:border-white/30 hover:bg-neutral-900/60 text-gray-300 hover:text-white text-sm font-medium py-10 transition-all"
           >
             + Add column
           </button>
@@ -431,16 +431,16 @@
       <!-- Rename Column Modal -->
       <Teleport to="body">
         <div v-if="renamingColumn" class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="renamingColumn = null"></div>
-          <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-96">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Rename column</h3>
+          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="renamingColumn = null"></div>
+          <div class="relative bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] border border-white/10 rounded-2xl shadow-2xl p-6 w-96">
+            <h3 class="text-lg font-semibold text-gray-100 mb-4">Rename column</h3>
             <input
               v-model="renameColumnName"
               @keydown.enter="doRenameColumn"
-              class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none mb-4"
+              class="w-full rounded-lg border border-white/10 px-4 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none mb-4"
             />
             <div class="flex justify-end gap-2">
-              <button @click="renamingColumn = null" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button @click="renamingColumn = null" class="px-4 py-2 text-sm text-gray-400 hover:text-gray-200">Cancel</button>
               <button
                 @click="doRenameColumn"
                 class="px-4 py-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all"
@@ -455,15 +455,15 @@
       <!-- Delete Column Confirmation -->
       <Teleport to="body">
         <div v-if="deletingColumn" class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="deletingColumn = null"></div>
-          <div class="relative bg-white rounded-2xl shadow-2xl p-6 w-96">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Delete column</h3>
-            <p class="text-sm text-gray-500 mb-4">
+          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="deletingColumn = null"></div>
+          <div class="relative bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] border border-white/10 rounded-2xl shadow-2xl p-6 w-96">
+            <h3 class="text-lg font-semibold text-gray-100 mb-2">Delete column</h3>
+            <p class="text-sm text-gray-400 mb-4">
               Are you sure you want to delete <strong>{{ deletingColumn.name }}</strong>?
               All tasks in this column will be deleted.
             </p>
             <div class="flex justify-end gap-2">
-              <button @click="deletingColumn = null" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+              <button @click="deletingColumn = null" class="px-4 py-2 text-sm text-gray-400 hover:text-gray-200">Cancel</button>
               <button
                 @click="doDeleteColumn"
                 class="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
@@ -478,8 +478,8 @@
       <!-- Task Modal -->
       <Teleport to="body">
         <div v-if="modalTask" class="fixed inset-0 z-50 flex items-center justify-center" tabindex="0" ref="modalOverlay" @keydown="onModalKeydown">
-          <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="closeTaskModal"></div>
-          <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
+          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeTaskModal"></div>
+          <div class="relative bg-neutral-900/85 backdrop-blur-xl border border-white/10 text-gray-100 [color-scheme:dark] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
             <div class="p-6 space-y-5">
 
               <!-- Title -->
@@ -487,7 +487,7 @@
                 v-model="modalTask.title"
                 @input="debouncedSave"
                 placeholder="Task title..."
-                class="w-full text-xl font-bold text-gray-800 border-none outline-none bg-transparent placeholder-gray-300"
+                class="w-full text-xl font-bold text-gray-100 border-none outline-none bg-transparent placeholder-gray-500"
               />
 
               <!-- Top Controls Row -->
@@ -495,10 +495,10 @@
                 <!-- Priority -->
                 <button
                   @click="cyclePriority"
-                  class="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors"
+                  class="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-white/10 hover:border-indigo-300 transition-colors"
                 >
                   <span v-if="priorityEmoji(modalTask.priority)">{{ priorityEmoji(modalTask.priority) }}</span>
-                  <span class="text-gray-600 capitalize">{{ modalTask.priority || 'none' }}</span>
+                  <span class="text-gray-300 capitalize">{{ modalTask.priority || 'none' }}</span>
                 </button>
 
                 <!-- Due Date -->
@@ -511,7 +511,7 @@
                     v-model="modalTask.due_date"
                     @change="debouncedSave"
                     type="date"
-                    class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+                    class="text-sm border border-white/10 rounded-lg px-3 py-1.5 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
                   />
                 </div>
 
@@ -519,7 +519,7 @@
                 <select
                   v-model="modalTask.project_id"
                   @change="debouncedSave"
-                  class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+                  class="text-sm border border-white/10 rounded-lg px-3 py-1.5 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
                 >
                   <option :value="null">No project</option>
                   <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -529,17 +529,17 @@
               <!-- Description -->
               <div>
                 <div class="flex items-center justify-between mb-2">
-                  <h4 class="text-sm font-semibold text-gray-600">Description</h4>
+                  <h4 class="text-sm font-semibold text-gray-300">Description</h4>
                   <div class="flex items-center gap-2">
                     <span v-if="!editingDescription" class="text-xs text-gray-400">
-                      Press <kbd class="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 font-mono">e</kbd> to edit
+                      Press <kbd class="px-1.5 py-0.5 bg-white/10 border border-white/20 rounded text-gray-300 font-mono">e</kbd> to edit
                     </span>
                     <button
                       @click="editingDescription ? exitEditDescription() : startEditDescription()"
                       class="text-xs font-medium px-2.5 py-1 rounded-lg transition-colors"
                       :class="editingDescription
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'"
+                        ? 'bg-indigo-500/25 text-indigo-200'
+                        : 'text-gray-400 hover:bg-white/10 hover:text-gray-200'"
                     >
                       {{ editingDescription ? '✏️ Editing' : '👁️ Viewing' }}
                     </button>
@@ -552,13 +552,13 @@
                   @input="autoGrowDescription(); debouncedSave()"
                   placeholder="Add a description... (supports **bold**, *italic*, `code`, [links](url), # headings)"
                   rows="4"
-                  class="w-full rounded-lg border border-indigo-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none resize-y overflow-y-auto min-h-[80px]"
+                  class="w-full rounded-lg border border-indigo-400/50 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none resize-y overflow-y-auto min-h-[80px]"
                 ></textarea>
                 <div
                   v-else
                   @dblclick="startEditDescription"
                   @click="onDescriptionClick"
-                  class="prose prose-sm max-w-none p-3 bg-gray-50 rounded-lg min-h-[80px] cursor-text hover:bg-gray-100 transition-colors"
+                  class="prose prose-sm prose-invert max-w-none p-3 bg-white/5 rounded-lg min-h-[80px] cursor-text hover:bg-white/10 transition-colors"
                   :class="{ 'text-gray-400 italic': !modalTask.description }"
                   v-html="modalTask.description ? renderMarkdown(modalTask.description) : 'Double-click to add a description...'"
                 ></div>
@@ -566,13 +566,13 @@
 
               <!-- Labels -->
               <div>
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">Labels</h4>
+                <h4 class="text-sm font-semibold text-gray-300 mb-2">Labels</h4>
                 <div class="flex flex-wrap gap-1.5 mb-2">
                   <span
                     v-for="label in (modalTask.labels || [])"
                     :key="label.id"
                     class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium"
-                    :style="{ backgroundColor: label.color + '20', color: label.color }"
+                    :style="{ backgroundColor: label.color + '33', color: label.color }"
                   >
                     {{ label.label || label.global_label?.name }}
                     <button
@@ -586,26 +586,26 @@
                 <div class="relative">
                   <button
                     @click="showLabelPicker = !showLabelPicker"
-                    class="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+                    class="text-xs text-indigo-300 hover:text-indigo-200 font-medium"
                   >
                     + Add label
                   </button>
                   <div
                     v-if="showLabelPicker"
-                    class="absolute left-0 top-6 z-10 bg-white rounded-xl shadow-xl border border-gray-100 p-3 w-64 max-h-48 overflow-y-auto"
+                    class="absolute left-0 top-6 z-10 bg-neutral-800 rounded-xl shadow-xl border border-white/10 p-3 w-64 max-h-48 overflow-y-auto"
                   >
                     <div v-if="!globalLabels.length" class="text-xs text-gray-400">No global labels available</div>
                     <button
                       v-for="(gl, glIdx) in globalLabels"
                       :key="gl.id"
                       @click="toggleLabelByIndex(glIdx)"
-                      class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 text-left text-sm"
-                      :class="isLabelApplied(gl) ? 'bg-indigo-50' : ''"
+                      class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/10 text-left text-sm"
+                      :class="isLabelApplied(gl) ? 'bg-indigo-500/20' : ''"
                     >
                       <span v-if="glIdx < 9" class="text-[10px] text-gray-400 font-mono w-3 text-center shrink-0">{{ glIdx + 1 }}</span>
                       <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: gl.color }"></span>
                       <span class="flex-1">{{ gl.name }}</span>
-                      <span v-if="isLabelApplied(gl)" class="text-indigo-500 text-xs">✓</span>
+                      <span v-if="isLabelApplied(gl)" class="text-indigo-300 text-xs">✓</span>
                     </button>
                   </div>
                 </div>
@@ -613,25 +613,25 @@
 
               <!-- Subtasks -->
               <div v-if="!modalTask.parent_task_id">
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">Subtasks</h4>
+                <h4 class="text-sm font-semibold text-gray-300 mb-2">Subtasks</h4>
                 <div class="space-y-1 mb-2">
                   <div
                     v-for="(st, stIndex) in (modalTask.subtasks || [])"
                     :key="st.id"
-                    class="flex items-center gap-2 px-2 py-1.5 bg-gray-50 rounded-lg group/st"
+                    class="flex items-center gap-2 px-2 py-1.5 bg-white/5 rounded-lg group/st"
                   >
                     <div class="flex flex-col -my-1">
                       <button
                         @click="moveSubtask(stIndex, -1)"
                         :disabled="stIndex === 0"
-                        class="p-0 text-gray-300 hover:text-indigo-500 disabled:opacity-20 disabled:cursor-default leading-none"
+                        class="p-0 text-gray-500 hover:text-indigo-300 disabled:opacity-20 disabled:cursor-default leading-none"
                       >
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
                       </button>
                       <button
                         @click="moveSubtask(stIndex, 1)"
                         :disabled="stIndex === (modalTask.subtasks || []).length - 1"
-                        class="p-0 text-gray-300 hover:text-indigo-500 disabled:opacity-20 disabled:cursor-default leading-none"
+                        class="p-0 text-gray-500 hover:text-indigo-300 disabled:opacity-20 disabled:cursor-default leading-none"
                       >
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                       </button>
@@ -648,25 +648,25 @@
                       @blur="saveSubtaskRename(st)"
                       @keydown.enter="saveSubtaskRename(st)"
                       @keydown.escape="editingSubtaskId = null"
-                      class="subtask-rename-input text-sm flex-1 border border-indigo-300 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-indigo-200"
+                      class="subtask-rename-input text-sm flex-1 border border-indigo-400/50 rounded px-1.5 py-0.5 outline-none focus:ring-2 focus:ring-indigo-400/40"
                     />
                     <span
                       v-else
-                      class="text-sm flex-1 cursor-pointer hover:text-indigo-600"
-                      :class="isSubtaskDone(st) ? 'line-through text-gray-400' : 'text-gray-700'"
+                      class="text-sm flex-1 cursor-pointer hover:text-indigo-200"
+                      :class="isSubtaskDone(st) ? 'line-through text-gray-400' : 'text-gray-200'"
                       @dblclick="startSubtaskRename(st)"
                     >{{ st.title }}</span>
                     <button
                       v-if="editingSubtaskId !== st.id"
                       @click="startSubtaskRename(st)"
-                      class="p-0.5 text-gray-300 hover:text-indigo-500 opacity-0 group-hover/st:opacity-100 transition-all"
+                      class="p-0.5 text-gray-500 hover:text-indigo-300 opacity-0 group-hover/st:opacity-100 transition-all"
                       title="Rename"
                     >
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                     </button>
                     <button
                       @click="deleteSubtask(st)"
-                      class="p-0.5 text-gray-300 hover:text-red-500 opacity-0 group-hover/st:opacity-100 transition-all"
+                      class="p-0.5 text-gray-500 hover:text-red-400 opacity-0 group-hover/st:opacity-100 transition-all"
                     >
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
@@ -677,7 +677,7 @@
                     v-model="newSubtaskTitle"
                     @keydown.enter="addSubtask"
                     placeholder="Add a subtask..."
-                    class="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+                    class="flex-1 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
                   />
                   <button
                     @click="addSubtask"
@@ -689,7 +689,7 @@
 
               <!-- Links -->
               <div>
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">Links</h4>
+                <h4 class="text-sm font-semibold text-gray-300 mb-2">Links</h4>
                 <div class="space-y-1.5 mb-2">
                   <div
                     v-for="link in (modalTask.links || [])"
@@ -704,13 +704,13 @@
                       :href="link.url"
                       target="_blank"
                       rel="noopener"
-                      class="text-indigo-500 hover:text-indigo-700 hover:underline truncate flex-1"
+                      class="text-indigo-300 hover:text-indigo-200 hover:underline truncate flex-1"
                     >
                       {{ link.title || link.url }}
                     </a>
                     <button
                       @click="deleteLink(link.id)"
-                      class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all p-0.5"
+                      class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-all p-0.5"
                     >
                       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -725,24 +725,24 @@
                     <input
                       v-model="newLinkTitle"
                       placeholder="Title"
-                      class="w-full text-sm rounded-lg border border-gray-200 px-3 py-1.5 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+                      class="w-full text-sm rounded-lg border border-white/10 px-3 py-1.5 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
                     />
                     <input
                       v-model="newLinkUrl"
                       @keydown.enter="addLink"
                       placeholder="https://..."
-                      class="w-full text-sm rounded-lg border border-gray-200 px-3 py-1.5 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none"
+                      class="w-full text-sm rounded-lg border border-white/10 px-3 py-1.5 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
                     />
                   </div>
                   <div class="flex gap-1">
-                    <button @click="addLink" class="text-xs font-medium text-indigo-500 hover:text-indigo-700 px-2 py-1.5">Add</button>
-                    <button @click="addingLink = false" class="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5">Cancel</button>
+                    <button @click="addLink" class="text-xs font-medium text-indigo-300 hover:text-indigo-200 px-2 py-1.5">Add</button>
+                    <button @click="addingLink = false" class="text-xs text-gray-400 hover:text-gray-200 px-2 py-1.5">Cancel</button>
                   </div>
                 </div>
                 <button
                   v-else
                   @click="addingLink = true"
-                  class="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+                  class="text-xs text-indigo-300 hover:text-indigo-200 font-medium"
                 >
                   + Add link
                 </button>
@@ -751,13 +751,13 @@
               <!-- Time Tracking -->
               <div>
                 <div class="flex items-center justify-between mb-2">
-                  <h4 class="text-sm font-semibold text-gray-600">Time Tracking</h4>
+                  <h4 class="text-sm font-semibold text-gray-300">Time Tracking</h4>
                   <div class="flex items-center gap-2">
                     <span class="text-xs text-gray-400">Total: {{ formatDuration(modalTaskTotalTime) }}</span>
                     <button
                       v-if="modalTaskTimeEntries.length"
                       @click="exportTaskCsv"
-                      class="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+                      class="text-xs text-indigo-300 hover:text-indigo-200 font-medium"
                     >
                       Export CSV
                     </button>
@@ -769,8 +769,8 @@
                     @click="toggleModalTaskTimer"
                     class="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border transition-all"
                     :class="isTimerRunningForTask(modalTask.id)
-                      ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
-                      : 'border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100'"
+                      ? 'border-red-400/30 bg-red-500/15 text-red-300 hover:bg-red-500/25'
+                      : 'border-indigo-400/30 bg-indigo-500/15 text-indigo-200 hover:bg-indigo-500/25'"
                   >
                     <svg v-if="!isTimerRunningForTask(modalTask.id)" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
@@ -786,30 +786,30 @@
                   <div
                     v-for="entry in modalTaskTimeEntries"
                     :key="entry.id"
-                    class="flex items-center justify-between text-xs text-gray-500 py-1 px-2 bg-gray-50 rounded-lg"
+                    class="flex items-center justify-between text-xs text-gray-400 py-1 px-2 bg-white/5 rounded-lg"
                   >
                     <div class="flex items-center gap-1">
                       <span>{{ formatDateTime(entry.start_time) }}</span>
-                      <span v-if="entry.subtask_name" class="text-indigo-500 text-[10px] font-medium px-1 bg-indigo-50 rounded">{{ entry.subtask_name }}</span>
+                      <span v-if="entry.subtask_name" class="text-indigo-300 text-[10px] font-medium px-1 bg-indigo-500/20 rounded">{{ entry.subtask_name }}</span>
                     </div>
                     <span v-if="entry.end_time">{{ formatDuration(entryDuration(entry)) }}</span>
-                    <span v-else class="text-green-500 font-medium">Running...</span>
+                    <span v-else class="text-green-400 font-medium">Running...</span>
                   </div>
                 </div>
                 <div v-else class="text-xs text-gray-400">No time entries</div>
               </div>
 
               <!-- Delete Task -->
-              <div class="pt-3 border-t border-gray-100">
+              <div class="pt-3 border-t border-white/10">
                 <button
                   v-if="!confirmingDelete"
                   @click="confirmingDelete = true"
-                  class="text-sm text-red-500 hover:text-red-700 font-medium"
+                  class="text-sm text-red-400 hover:text-red-300 font-medium"
                 >
                   Delete task
                 </button>
                 <div v-else class="flex items-center gap-3">
-                  <span class="text-sm text-red-600">Are you sure?</span>
+                  <span class="text-sm text-red-400">Are you sure?</span>
                   <button
                     @click="deleteTask"
                     class="text-sm bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition-colors"
@@ -818,7 +818,7 @@
                   </button>
                   <button
                     @click="confirmingDelete = false"
-                    class="text-sm text-gray-500 hover:text-gray-700"
+                    class="text-sm text-gray-400 hover:text-gray-200"
                   >
                     Cancel
                   </button>
@@ -1925,11 +1925,11 @@ function renderMarkdown(text) {
   html = html.split('\n').map(line => {
     // Horizontal rule: a line of three or more dashes. Emitted as <hr> which
     // starts with "<h", so the later line-break pass won't prepend a stray <br>.
-    if (line.match(/^\s*-{3,}\s*$/)) return '<hr class="my-3 border-t border-gray-200">';
+    if (line.match(/^\s*-{3,}\s*$/)) return '<hr class="my-3 border-t border-white/10">';
     // Headings
-    if (line.match(/^### /)) return '<h3 class="text-base font-semibold text-gray-800 mt-2 mb-1">' + line.slice(4) + '</h3>';
-    if (line.match(/^## /)) return '<h2 class="text-lg font-semibold text-gray-800 mt-3 mb-1">' + line.slice(3) + '</h2>';
-    if (line.match(/^# /)) return '<h1 class="text-xl font-bold text-gray-800 mt-3 mb-1">' + line.slice(2) + '</h1>';
+    if (line.match(/^### /)) return '<h3 class="text-base font-semibold text-gray-100 mt-2 mb-1">' + line.slice(4) + '</h3>';
+    if (line.match(/^## /)) return '<h2 class="text-lg font-semibold text-gray-100 mt-3 mb-1">' + line.slice(3) + '</h2>';
+    if (line.match(/^# /)) return '<h1 class="text-xl font-bold text-gray-100 mt-3 mb-1">' + line.slice(2) + '</h1>';
     // Task-list checkboxes (read-only): - [ ] / - [x]. Must precede the bullet rule.
     // Uses a <label> wrapper so the line-break pass (which skips <h/<l/<u) won't add a <br>.
     const task = line.match(/^[-*] \[([ xX])\] (.*)$/);
@@ -1950,11 +1950,11 @@ function renderMarkdown(text) {
     // Italic
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     // Inline code
-    .replace(/`(.+?)`/g, '<code class="bg-gray-100 text-indigo-600 px-1 rounded text-xs">$1</code>')
+    .replace(/`(.+?)`/g, '<code class="bg-white/10 text-indigo-300 px-1 rounded text-xs">$1</code>')
     // Markdown links [text](url)
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-indigo-500 hover:underline">$1</a>')
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-indigo-300 hover:underline">$1</a>')
     // Bare URLs (not already inside an href="..." or >...</a>)
-    .replace(/(^|[^"'>=])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="text-indigo-500 hover:underline">$2</a>')
+    .replace(/(^|[^"'>=])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" class="text-indigo-300 hover:underline">$2</a>')
     // Line breaks (but not after block elements)
     .replace(/\n(?!<[hlu])/g, '<br>');
   // Re-insert fenced code blocks as styled blocks with a copy button. Strip any
@@ -1962,7 +1962,7 @@ function renderMarkdown(text) {
   // sits on its own line without extra gaps.
   html = html.replace(/(?:<br>)?\s*CODEBLOCK(\d+)\s*(?:<br>)?/g, (_, i) => {
     const code = codeBlocks[Number(i)] || '';
-    return '<div class="code-block relative my-2 rounded-lg bg-gray-800 group">' +
+    return '<div class="code-block relative my-2 rounded-lg bg-black/40 border border-white/10 group">' +
       '<button type="button" class="copy-code-btn absolute top-1.5 right-1.5 text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-200 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">Copy</button>' +
       '<pre class="overflow-x-auto p-3 pt-2 text-xs leading-relaxed"><code class="text-gray-100">' + code + '</code></pre>' +
       '</div>';
@@ -2105,7 +2105,8 @@ onUnmounted(() => {
 
 .task-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .task-card.dragging {
@@ -2113,8 +2114,8 @@ onUnmounted(() => {
 }
 
 .task-card-done {
-  background-color: #f3f4f6;
-  opacity: 0.7;
+  background-color: rgba(38, 38, 38, 0.6);
+  opacity: 0.6;
 }
 
 .task-done-checkbox {
@@ -2123,9 +2124,9 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   min-width: 18px;
-  border: 2px solid #d1d5db;
+  border: 2px solid #6b7280;
   border-radius: 5px;
-  background: white;
+  background: transparent;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
   margin-top: 1px;
@@ -2161,7 +2162,7 @@ onUnmounted(() => {
 }
 
 .subtask-card:hover {
-  background-color: #f0f0ff;
+  background-color: rgba(64, 64, 64, 0.9);
 }
 
 .subtask-card.dragging {
@@ -2174,9 +2175,9 @@ onUnmounted(() => {
   width: 16px;
   height: 16px;
   min-width: 16px;
-  border: 2px solid #d1d5db;
+  border: 2px solid #6b7280;
   border-radius: 4px;
-  background: white;
+  background: transparent;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
   position: relative;
@@ -2204,9 +2205,9 @@ onUnmounted(() => {
 }
 
 .drop-placeholder {
-  border: 2px dashed #a5b4fc;
+  border: 2px dashed rgba(165, 180, 252, 0.5);
   border-radius: 8px;
-  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  background: rgba(99, 102, 241, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2226,7 +2227,7 @@ onUnmounted(() => {
 }
 
 .column-drag-over {
-  background-color: #e0f2fe !important;
+  background-color: rgba(255, 255, 255, 0.06) !important;
   border-radius: 0.75rem;
 }
 

@@ -1,17 +1,17 @@
 <template>
   <AppLayout>
     <div v-if="!isOwner" class="max-w-5xl mx-auto">
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-8 text-center">
-        <h2 class="text-xl font-bold text-gray-800 mb-2">Automations are owner-only</h2>
-        <p class="text-sm text-gray-500">Only the owner of this board can manage its automations.</p>
+      <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-8 text-center">
+        <h2 class="text-xl font-bold text-gray-100 mb-2">Automations are owner-only</h2>
+        <p class="text-sm text-gray-400">Only the owner of this board can manage its automations.</p>
       </div>
     </div>
     <div v-else class="max-w-5xl mx-auto space-y-6">
       <!-- List View -->
       <template v-if="!showBuilder">
-        <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+        <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold text-gray-800">Automations</h2>
+            <h2 class="text-xl font-bold text-gray-100">Automations</h2>
             <button
               @click="openBuilder()"
               class="px-4 py-2 text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
@@ -24,21 +24,21 @@
             <div
               v-for="automation in automations"
               :key="automation.id"
-              class="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+              class="p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
             >
               <div class="flex items-start justify-between gap-4">
                 <div class="flex-1 min-w-0">
-                  <h3 class="text-sm font-semibold text-gray-800">
+                  <h3 class="text-sm font-semibold text-gray-100">
                     {{ automation.name || 'Unnamed Automation' }}
                   </h3>
-                  <p class="text-xs text-gray-500 mt-1">
+                  <p class="text-xs text-gray-400 mt-1">
                     <span class="font-medium">Trigger:</span> {{ describeTrigger(automation.trigger) }}
                   </p>
                   <div v-if="automation.actions && automation.actions.length" class="mt-1">
                     <p
                       v-for="(action, i) in automation.actions"
                       :key="i"
-                      class="text-xs text-gray-500"
+                      class="text-xs text-gray-400"
                     >
                       <span class="font-medium">Action {{ i + 1 }}:</span> {{ describeAction(action) }}
                     </p>
@@ -48,7 +48,7 @@
                   <button
                     @click="toggleAutomation(automation)"
                     class="relative w-10 h-5 rounded-full transition-colors"
-                    :class="automation.enabled ? 'bg-indigo-500' : 'bg-gray-300'"
+                    :class="automation.enabled ? 'bg-indigo-500' : 'bg-white/20'"
                   >
                     <span
                       class="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
@@ -57,21 +57,21 @@
                   </button>
                   <button
                     @click="openHistory(automation)"
-                    class="p-1.5 text-gray-400 hover:text-indigo-500 transition-colors"
+                    class="p-1.5 text-gray-400 hover:text-indigo-400 transition-colors"
                     title="History"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                   </button>
                   <button
                     @click="openBuilder(automation)"
-                    class="p-1.5 text-gray-400 hover:text-indigo-500 transition-colors"
+                    class="p-1.5 text-gray-400 hover:text-indigo-400 transition-colors"
                     title="Edit"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                   </button>
                   <button
                     @click="deleteAutomation(automation)"
-                    class="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                    class="p-1.5 text-gray-400 hover:text-red-400 transition-colors"
                     title="Delete"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -88,25 +88,25 @@
 
       <!-- Builder View -->
       <template v-else>
-        <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-          <h2 class="text-xl font-bold text-gray-800 mb-6">
+        <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
+          <h2 class="text-xl font-bold text-gray-100 mb-6">
             {{ editingAutomation ? 'Edit Automation' : 'New Automation' }}
           </h2>
           <div class="space-y-6">
             <!-- Name -->
             <div>
-              <label class="block text-sm font-medium text-gray-600 mb-1">Name (optional)</label>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Name (optional)</label>
               <input
                 v-model="builderForm.name"
                 type="text"
                 placeholder="My automation"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
             </div>
 
             <!-- Step 1: Trigger -->
             <div>
-              <h3 class="text-sm font-semibold text-gray-700 mb-3">Step 1: When this happens...</h3>
+              <h3 class="text-sm font-semibold text-gray-200 mb-3">Step 1: When this happens...</h3>
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <button
                   v-for="trigger in triggerTypes"
@@ -114,11 +114,11 @@
                   @click="selectTrigger(trigger.type)"
                   class="p-3 rounded-xl border-2 text-center transition-all hover:shadow-md"
                   :class="builderForm.trigger.type === trigger.type
-                    ? 'border-indigo-500 bg-indigo-50'
-                    : 'border-gray-200 bg-white hover:border-indigo-300'"
+                    ? 'border-indigo-500 bg-indigo-500/15'
+                    : 'border-white/10 bg-white/5 hover:border-indigo-300'"
                 >
                   <span class="text-2xl block mb-1">{{ trigger.icon }}</span>
-                  <span class="text-xs font-medium text-gray-700">{{ trigger.label }}</span>
+                  <span class="text-xs font-medium text-gray-200">{{ trigger.label }}</span>
                 </button>
               </div>
 
@@ -127,10 +127,10 @@
                 v-if="triggerNeedsColumn"
                 class="mt-3"
               >
-                <label class="block text-sm font-medium text-gray-600 mb-1">Column</label>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Column</label>
                 <select
                   v-model="builderForm.trigger.column_id"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 >
                   <option :value="null" disabled>Select column</option>
                   <option v-for="col in selectedBoardColumns" :key="col.id" :value="col.id">{{ col.name }}</option>
@@ -143,19 +143,19 @@
                 class="mt-3 flex items-center gap-3"
               >
                 <div>
-                  <label class="block text-sm font-medium text-gray-600 mb-1">Days</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-1">Days</label>
                   <input
                     v-model.number="builderForm.trigger.days"
                     type="number"
                     min="1"
-                    class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    class="w-20 border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-600 mb-1">When</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-1">When</label>
                   <select
                     v-model="builderForm.trigger.direction"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    class="border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   >
                     <option value="before">Before due date</option>
                     <option value="after">After due date</option>
@@ -169,10 +169,10 @@
                 class="mt-3 flex flex-wrap items-end gap-3"
               >
                 <div>
-                  <label class="block text-sm font-medium text-gray-600 mb-1">Frequency</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-1">Frequency</label>
                   <select
                     v-model="builderForm.trigger.frequency"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    class="border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   >
                     <option value="daily">Every day</option>
                     <option value="weekly">Every week</option>
@@ -182,10 +182,10 @@
 
                 <!-- Weekly: day of week -->
                 <div v-if="builderForm.trigger.frequency === 'weekly'">
-                  <label class="block text-sm font-medium text-gray-600 mb-1">Day</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-1">Day</label>
                   <select
                     v-model.number="builderForm.trigger.day_of_week"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    class="border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   >
                     <option v-for="d in weekdays" :key="d.value" :value="d.value">{{ d.label }}</option>
                   </select>
@@ -193,22 +193,22 @@
 
                 <!-- Monthly: day of month -->
                 <div v-if="builderForm.trigger.frequency === 'monthly'">
-                  <label class="block text-sm font-medium text-gray-600 mb-1">Day of month</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-1">Day of month</label>
                   <input
                     v-model.number="builderForm.trigger.day_of_month"
                     type="number"
                     min="1"
                     max="31"
-                    class="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    class="w-20 border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium text-gray-600 mb-1">At (time)</label>
+                  <label class="block text-sm font-medium text-gray-300 mb-1">At (time)</label>
                   <input
                     v-model="builderForm.trigger.time"
                     type="time"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    class="border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
                 </div>
                 <p class="w-full text-xs text-gray-400">Times are in your local timezone ({{ userTimezone }}).</p>
@@ -217,18 +217,18 @@
 
             <!-- Step 2: Actions -->
             <div>
-              <h3 class="text-sm font-semibold text-gray-700 mb-3">Step 2: Do this...</h3>
+              <h3 class="text-sm font-semibold text-gray-200 mb-3">Step 2: Do this...</h3>
               <div class="space-y-3">
                 <div
                   v-for="(action, index) in builderForm.actions"
                   :key="index"
-                  class="p-4 bg-gray-50 rounded-xl space-y-3"
+                  class="p-4 bg-white/5 rounded-xl space-y-3"
                 >
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-medium text-gray-400">Action {{ index + 1 }}</span>
                     <button
                       @click="removeAction(index)"
-                      class="text-gray-400 hover:text-red-500 transition-colors"
+                      class="text-gray-400 hover:text-red-400 transition-colors"
                       title="Remove action"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -237,7 +237,7 @@
                   <select
                     v-model="action.type"
                     @change="onActionTypeChange(index)"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   >
                     <option :value="null" disabled>Select action type</option>
                     <!-- Scheduled (time-based) triggers act on the board, not a single card -->
@@ -261,20 +261,20 @@
                   <template v-if="action.type === 'move_card'">
                     <div class="flex flex-wrap gap-3">
                       <div class="flex-1 min-w-[10rem]">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">To Column</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">To Column</label>
                         <select
                           v-model="action.column_id"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option :value="null" disabled>Select column</option>
                           <option v-for="col in selectedBoardColumns" :key="col.id" :value="col.id">{{ col.name }}</option>
                         </select>
                       </div>
                       <div class="w-32">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Position</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Position</label>
                         <select
                           v-model="action.position"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option value="top">Top</option>
                           <option value="bottom">Bottom</option>
@@ -286,10 +286,10 @@
                   <!-- Add Label Config -->
                   <template v-if="action.type === 'add_label'">
                     <div>
-                      <label class="block text-xs font-medium text-gray-500 mb-1">Label</label>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Label</label>
                       <select
                         v-model="action.label_id"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       >
                         <option :value="null" disabled>Select label</option>
                         <option v-for="label in globalLabels" :key="label.id" :value="label.id">
@@ -302,11 +302,11 @@
                   <!-- Update Due Date Config -->
                   <template v-if="action.type === 'update_due_date'">
                     <div>
-                      <label class="block text-xs font-medium text-gray-500 mb-1">Days offset (positive = future, negative = past)</label>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Days offset (positive = future, negative = past)</label>
                       <input
                         v-model.number="action.days_offset"
                         type="number"
-                        class="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        class="w-32 border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       />
                     </div>
                   </template>
@@ -314,38 +314,38 @@
                   <!-- Create Card Config -->
                   <template v-if="action.type === 'create_card'">
                     <div>
-                      <label class="block text-xs font-medium text-gray-500 mb-1">Card title</label>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Card title</label>
                       <input
                         v-model="action.title"
                         type="text"
                         placeholder="e.g. Daily standup notes"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium text-gray-500 mb-1">Description (optional)</label>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Description (optional)</label>
                       <textarea
                         v-model="action.description"
                         rows="2"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       ></textarea>
                     </div>
                     <div class="flex flex-wrap gap-3">
                       <div class="flex-1 min-w-[10rem]">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">In column</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">In column</label>
                         <select
                           v-model="action.column_id"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option :value="null" disabled>Select column</option>
                           <option v-for="col in selectedBoardColumns" :key="col.id" :value="col.id">{{ col.name }}</option>
                         </select>
                       </div>
                       <div class="w-32">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Priority</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Priority</label>
                         <select
                           v-model="action.priority"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option value="none">None</option>
                           <option value="low">Low</option>
@@ -354,21 +354,21 @@
                         </select>
                       </div>
                       <div class="w-36">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Due in (days)</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Due in (days)</label>
                         <input
                           v-model.number="action.due_in_days"
                           type="number"
                           min="0"
                           placeholder="—"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         />
                       </div>
                     </div>
                     <div>
-                      <label class="block text-xs font-medium text-gray-500 mb-1">Label (optional)</label>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Label (optional)</label>
                       <select
                         v-model="action.label_id"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       >
                         <option :value="null">No label</option>
                         <option v-for="label in globalLabels" :key="label.id" :value="label.id">{{ label.name }}</option>
@@ -380,30 +380,30 @@
                   <template v-if="action.type === 'bulk_move'">
                     <div class="flex flex-wrap gap-3">
                       <div class="flex-1 min-w-[10rem]">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">From column</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">From column</label>
                         <select
                           v-model="action.from_column_id"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option :value="null" disabled>Select column</option>
                           <option v-for="col in selectedBoardColumns" :key="col.id" :value="col.id">{{ col.name }}</option>
                         </select>
                       </div>
                       <div class="flex-1 min-w-[10rem]">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">To column</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">To column</label>
                         <select
                           v-model="action.to_column_id"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option :value="null" disabled>Select column</option>
                           <option v-for="col in selectedBoardColumns" :key="col.id" :value="col.id">{{ col.name }}</option>
                         </select>
                       </div>
                       <div class="w-32">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Position</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Position</label>
                         <select
                           v-model="action.position"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option value="top">Top</option>
                           <option value="bottom">Bottom</option>
@@ -416,10 +416,10 @@
                   <template v-if="action.type === 'due_cards'">
                     <div class="flex flex-wrap gap-3">
                       <div class="w-40">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Which cards</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Which cards</label>
                         <select
                           v-model="action.scope"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option value="overdue">Overdue</option>
                           <option value="due_today">Due today</option>
@@ -427,19 +427,19 @@
                         </select>
                       </div>
                       <div v-if="action.scope === 'due_within'" class="w-28">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Days</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Days</label>
                         <input
                           v-model.number="action.within_days"
                           type="number"
                           min="0"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         />
                       </div>
                       <div class="w-40">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Then</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Then</label>
                         <select
                           v-model="action.then"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option value="move">Move to column</option>
                           <option value="add_label">Add label</option>
@@ -449,20 +449,20 @@
                       </div>
                     </div>
                     <div v-if="action.then === 'move'">
-                      <label class="block text-xs font-medium text-gray-500 mb-1">Target column</label>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Target column</label>
                       <select
                         v-model="action.column_id"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       >
                         <option :value="null" disabled>Select column</option>
                         <option v-for="col in selectedBoardColumns" :key="col.id" :value="col.id">{{ col.name }}</option>
                       </select>
                     </div>
                     <div v-if="action.then === 'add_label'">
-                      <label class="block text-xs font-medium text-gray-500 mb-1">Label</label>
+                      <label class="block text-xs font-medium text-gray-400 mb-1">Label</label>
                       <select
                         v-model="action.label_id"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       >
                         <option :value="null" disabled>Select label</option>
                         <option v-for="label in globalLabels" :key="label.id" :value="label.id">{{ label.name }}</option>
@@ -474,10 +474,10 @@
                   <template v-if="action.type === 'archive_cards'">
                     <div class="flex flex-wrap gap-3">
                       <div class="flex-1 min-w-[10rem]">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Archive which cards</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Archive which cards</label>
                         <select
                           v-model="action.scope"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option value="completed">Completed cards</option>
                           <option value="done">Cards in "Done" column</option>
@@ -485,10 +485,10 @@
                         </select>
                       </div>
                       <div v-if="action.scope === 'column'" class="flex-1 min-w-[10rem]">
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Column</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Column</label>
                         <select
                           v-model="action.column_id"
-                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                          class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                         >
                           <option :value="null" disabled>Select column</option>
                           <option v-for="col in selectedBoardColumns" :key="col.id" :value="col.id">{{ col.name }}</option>
@@ -500,17 +500,17 @@
               </div>
               <button
                 @click="addAction"
-                class="mt-3 px-4 py-2 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-all"
+                class="mt-3 px-4 py-2 text-sm font-medium text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/15 transition-all"
               >
                 + Add Action
               </button>
             </div>
 
             <!-- Save / Cancel -->
-            <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <div class="flex justify-end gap-3 pt-4 border-t border-white/10">
               <button
                 @click="cancelBuilder"
-                class="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                class="px-4 py-2 text-sm font-medium text-gray-300 border border-white/20 rounded-lg hover:bg-white/10 transition-all"
               >
                 Cancel
               </button>
@@ -533,13 +533,13 @@
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       @click.self="closeHistory"
     >
-      <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <div class="bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] border border-white/10 rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div>
-            <h3 class="text-lg font-bold text-gray-800">Execution history</h3>
-            <p class="text-xs text-gray-500">{{ historyAutomation?.name || 'Unnamed Automation' }}</p>
+            <h3 class="text-lg font-bold text-gray-100">Execution history</h3>
+            <p class="text-xs text-gray-400">{{ historyAutomation?.name || 'Unnamed Automation' }}</p>
           </div>
-          <button @click="closeHistory" class="p-1.5 text-gray-400 hover:text-gray-700 transition-colors" title="Close">
+          <button @click="closeHistory" class="p-1.5 text-gray-400 hover:text-gray-200 transition-colors" title="Close">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
@@ -552,7 +552,7 @@
             <li
               v-for="run in runs"
               :key="run.id"
-              class="flex items-start gap-3 p-3 rounded-lg bg-gray-50"
+              class="flex items-start gap-3 p-3 rounded-lg bg-white/5"
             >
               <span
                 class="mt-0.5 inline-block w-2 h-2 rounded-full shrink-0"
@@ -560,7 +560,7 @@
                 :title="run.status"
               ></span>
               <div class="min-w-0 flex-1">
-                <p class="text-sm text-gray-800 break-words">{{ run.message }}</p>
+                <p class="text-sm text-gray-100 break-words">{{ run.message }}</p>
                 <p class="text-xs text-gray-400 mt-0.5">{{ formatRunTime(run.created_at) }}</p>
               </div>
             </li>

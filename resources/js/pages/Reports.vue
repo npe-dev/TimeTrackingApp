@@ -2,33 +2,33 @@
   <AppLayout>
     <div class="max-w-5xl mx-auto space-y-6">
       <!-- Date Range Filter -->
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Time Reports</h2>
+      <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-100 mb-4">Time Reports</h2>
         <div class="flex flex-wrap items-end gap-4">
           <div class="w-full sm:w-auto">
-            <label class="block text-sm font-medium text-gray-600 mb-1">Start Date</label>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Start Date</label>
             <input
               v-model="startDate"
               @change="onDateChange"
               type="date"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </div>
           <div class="w-full sm:w-auto">
-            <label class="block text-sm font-medium text-gray-600 mb-1">End Date</label>
+            <label class="block text-sm font-medium text-gray-300 mb-1">End Date</label>
             <input
               v-model="endDate"
               @change="onDateChange"
               type="date"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </div>
           <div class="w-full sm:w-auto">
-            <label class="block text-sm font-medium text-gray-600 mb-1">Project</label>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Project</label>
             <select
               v-model="selectedProjectId"
               @change="loadReport"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              class="w-full border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
               <option :value="null">All Projects</option>
               <option v-for="project in projects" :key="project.id" :value="project.id">
@@ -42,7 +42,7 @@
               class="px-4 py-2 text-sm font-medium rounded-lg transition-all"
               :class="activePreset === 'week'
                 ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'"
+                : 'bg-white/10 text-gray-300 hover:bg-indigo-500/15 hover:text-indigo-300'"
             >
               This Week
             </button>
@@ -51,14 +51,14 @@
               class="px-4 py-2 text-sm font-medium rounded-lg transition-all"
               :class="activePreset === 'month'
                 ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'"
+                : 'bg-white/10 text-gray-300 hover:bg-indigo-500/15 hover:text-indigo-300'"
             >
               This Month
             </button>
           </div>
           <button
             @click="exportCsv"
-            class="px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-all"
+            class="px-4 py-2 text-sm font-medium bg-white/5 border border-white/20 text-gray-300 rounded-lg hover:bg-white/10 transition-all"
           >
             Export CSV
           </button>
@@ -67,27 +67,27 @@
 
       <!-- Summary Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6 text-center">
-          <p class="text-sm text-gray-500 mb-1">Total Time</p>
-          <p class="text-2xl font-bold text-gray-800">{{ formatMinutes(summary.totalMinutes) }}</p>
+        <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6 text-center">
+          <p class="text-sm text-gray-400 mb-1">Total Time</p>
+          <p class="text-2xl font-bold text-gray-100">{{ formatMinutes(summary.totalMinutes) }}</p>
         </div>
-        <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6 text-center">
-          <p class="text-sm text-gray-500 mb-1">Total Entries</p>
-          <p class="text-2xl font-bold text-gray-800">{{ summary.totalEntries }}</p>
+        <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6 text-center">
+          <p class="text-sm text-gray-400 mb-1">Total Entries</p>
+          <p class="text-2xl font-bold text-gray-100">{{ summary.totalEntries }}</p>
         </div>
-        <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6 text-center">
-          <p class="text-sm text-gray-500 mb-1">Average per Day</p>
-          <p class="text-2xl font-bold text-gray-800">{{ formatMinutes(summary.averagePerDay) }}</p>
+        <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6 text-center">
+          <p class="text-sm text-gray-400 mb-1">Average per Day</p>
+          <p class="text-2xl font-bold text-gray-100">{{ formatMinutes(summary.averagePerDay) }}</p>
         </div>
       </div>
 
       <!-- Time by Project -->
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Time by Project</h3>
+      <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
+        <h3 class="text-lg font-bold text-gray-100 mb-4">Time by Project</h3>
         <div v-if="summary.byProject && summary.byProject.length" class="space-y-3">
           <div v-for="project in summary.byProject" :key="project.id" class="flex items-center gap-3">
-            <span class="text-sm text-gray-600 w-24 sm:w-32 truncate shrink-0">{{ project.name || 'No project' }}</span>
-            <div class="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+            <span class="text-sm text-gray-300 w-24 sm:w-32 truncate shrink-0">{{ project.name || 'No project' }}</span>
+            <div class="flex-1 bg-white/10 rounded-full h-6 overflow-hidden">
               <div
                 class="h-full rounded-full flex items-center px-2 transition-all duration-500"
                 :style="{
@@ -110,12 +110,12 @@
       </div>
 
       <!-- Time by Day -->
-      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-4">Time by Day</h3>
+      <div class="bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg p-6">
+        <h3 class="text-lg font-bold text-gray-100 mb-4">Time by Day</h3>
         <div v-if="summary.byDay && summary.byDay.length" class="space-y-2">
           <div v-for="day in summary.byDay" :key="day.date" class="flex items-center gap-3">
-            <span class="text-sm text-gray-600 w-20 sm:w-28 shrink-0">{{ day.date }}</span>
-            <div class="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+            <span class="text-sm text-gray-300 w-20 sm:w-28 shrink-0">{{ day.date }}</span>
+            <div class="flex-1 bg-white/10 rounded-full h-5 overflow-hidden">
               <div
                 class="h-full bg-indigo-500 rounded-full flex items-center px-2 transition-all duration-500"
                 :style="{
