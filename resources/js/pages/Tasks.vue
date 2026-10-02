@@ -1931,7 +1931,7 @@ function renderMarkdown(text) {
   });
   const links = [];
   const linkClass = 'class="text-indigo-300 hover:underline"';
-  html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)|(https?:\/\/[^\s<"]+)/g, (_, text, url, bare) => {
+  html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)|(https?:\/\/[^\s<"|]+)/g, (_, text, url, bare) => {
     if (bare) {
       // Leave trailing sentence punctuation outside the link.
       const trail = bare.match(/[.,;:!?]+$/)?.[0] || '';
@@ -1942,8 +1942,36 @@ function renderMarkdown(text) {
     links.push('<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" ' + linkClass + '>');
     return '\u0000L' + (links.length - 1) + '\u0000' + text + '\u0000/L\u0000';
   });
+  // Tables (GFM): a header row, a |---|:--:| separator row, then body rows.
+  // Each table is collapsed onto one line so the line-break pass adds no <br> inside it.
+  const splitRow = row => row.trim().replace(/^\|/, '').replace(/(?<!\\)\|$/, '')
+    .split(/(?<!\\)\|/).map(cell => cell.trim().replace(/\\\|/g, '|'));
+  const isSeparator = row => row?.includes('|') && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(row);
+  const srcLines = html.split('\n');
+  const lines = [];
+  for (let i = 0; i < srcLines.length; i++) {
+    if (!srcLines[i].includes('|') || !isSeparator(srcLines[i + 1])) {
+      lines.push(srcLines[i]);
+      continue;
+    }
+    const header = splitRow(srcLines[i]);
+    const aligns = splitRow(srcLines[i + 1]).map(s =>
+      s.startsWith(':') && s.endsWith(':') ? 'text-center' : s.endsWith(':') ? 'text-right' : 'text-left');
+    const cell = (tag, content, j) => '<' + tag + ' class="border border-white/10 px-2 py-1 ' + (aligns[j] || 'text-left') +
+      (tag === 'th' ? ' bg-white/5 font-semibold text-gray-100' : '') + '">' + (content ?? '') + '</' + tag + '>';
+    let table = '<div class="overflow-x-auto my-2"><table class="text-sm border-collapse">' +
+      '<thead><tr>' + header.map((c, j) => cell('th', c, j)).join('') + '</tr></thead><tbody>';
+    i += 2;
+    while (i < srcLines.length && srcLines[i].includes('|') && srcLines[i].trim()) {
+      const cells = splitRow(srcLines[i]);
+      table += '<tr>' + header.map((_, j) => cell('td', cells[j], j)).join('') + '</tr>';
+      i++;
+    }
+    i--;
+    lines.push(table + '</tbody></table></div>');
+  }
   // Process line by line for headings
-  html = html.split('\n').map(line => {
+  html = lines.map(line => {
     // Horizontal rule: a line of three or more dashes. Emitted as <hr> which
     // starts with "<h", so the later line-break pass won't prepend a stray <br>.
     if (line.match(/^\s*-{3,}\s*$/)) return '<hr class="my-3 border-t border-white/10">';
@@ -1970,8 +1998,8 @@ function renderMarkdown(text) {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     // Italic
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Line breaks (but not after block elements)
-    .replace(/\n(?!<[hlu])/g, '<br>')
+    // Line breaks (but not before block elements)
+    .replace(/\n(?!<[hlud])/g, '<br>')
     // Restore links and inline code
     .replace(/\u0000\/L\u0000/g, '</a>')
     .replace(/\u0000L(\d+)\u0000/g, (_, i) => links[Number(i)])
