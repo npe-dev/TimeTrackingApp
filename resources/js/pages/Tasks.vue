@@ -1,125 +1,119 @@
 <template>
   <AppLayout>
-    <div class="max-w-full mx-auto px-2">
+    <template #header-actions>
+      <div class="hidden xl:block text-sm text-gray-400 whitespace-nowrap">
+        {{ board?.columns?.length || 0 }} columns &middot;
+        {{ totalTaskCount }} tasks
+      </div>
+      <div class="flex items-center gap-1 relative filter-panel-container">
+        <button
+          @click="toggleFilterPanel"
+          title="Filter cards"
+          class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors"
+          :class="hasActiveFilters ? 'bg-indigo-500/25 text-indigo-200' : 'text-gray-300 hover:bg-white/10 hover:text-white'"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+          <span class="hidden xl:inline">Filter</span>
+          <span v-if="hasActiveFilters" class="bg-indigo-500 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center">{{ activeFilterCount }}</span>
+        </button>
+        <button
+          v-if="hasActiveFilters"
+          @click.stop="clearFilters"
+          class="p-1 text-gray-400 hover:text-red-400 transition-colors"
+          title="Clear all filters"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
 
-      <!-- Board Selector -->
-      <div class="relative z-30 bg-neutral-900/55 backdrop-blur-md border border-white/10 rounded-2xl shadow-lg px-6 py-4 mb-4 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <h2 class="text-lg font-semibold text-white">{{ board?.name || 'No board' }}</h2>
-        </div>
-        <div class="flex items-center gap-3">
-          <div class="flex items-center gap-1 relative filter-panel-container">
-            <button
-              @click="toggleFilterPanel"
-              class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors"
-              :class="hasActiveFilters ? 'bg-indigo-500/25 text-indigo-200' : 'text-gray-300 hover:bg-white/10 hover:text-white'"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-              Filter
-              <span v-if="hasActiveFilters" class="bg-indigo-500 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center">{{ activeFilterCount }}</span>
-            </button>
-            <button
-              v-if="hasActiveFilters"
-              @click.stop="clearFilters"
-              class="p-1 text-gray-400 hover:text-red-400 transition-colors"
-              title="Clear all filters"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+        <!-- Filter Panel -->
+        <div
+          v-if="showFilterPanel"
+          class="absolute right-0 top-10 z-50 bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] rounded-xl shadow-2xl border border-white/10 w-72 max-h-[70vh] overflow-y-auto"
+        >
+          <div class="p-3 space-y-3">
+            <!-- Search -->
+            <div>
+              <input
+                ref="filterSearchInput"
+                v-model="filterSearch"
+                @keydown="onFilterKeydown"
+                placeholder="Search cards... (press / to focus)"
+                class="w-full rounded-lg border border-white/10 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
+              />
+            </div>
 
-            <!-- Filter Panel -->
-            <div
-              v-if="showFilterPanel"
-              class="absolute right-0 top-10 z-50 bg-neutral-900/90 backdrop-blur-xl text-gray-100 [color-scheme:dark] rounded-xl shadow-2xl border border-white/10 w-72 max-h-[70vh] overflow-y-auto"
-            >
-              <div class="p-3 space-y-3">
-                <!-- Search -->
-                <div>
-                  <input
-                    ref="filterSearchInput"
-                    v-model="filterSearch"
-                    @keydown="onFilterKeydown"
-                    placeholder="Search cards... (press / to focus)"
-                    class="w-full rounded-lg border border-white/10 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none"
-                  />
-                </div>
+            <!-- Matched labels from search -->
+            <div v-if="filterSearch.trim() && matchedLabels.length" class="space-y-1">
+              <div class="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Matching labels</div>
+              <button
+                v-for="ml in matchedLabels"
+                :key="ml.id"
+                @click="toggleFilterLabel(ml.id)"
+                class="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white/10 text-left text-xs"
+              >
+                <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: ml.color }"></span>
+                <span class="flex-1">{{ ml.name }}</span>
+                <span v-if="filterLabelIds.includes(ml.id)" class="text-indigo-400">✓</span>
+              </button>
+            </div>
 
-                <!-- Matched labels from search -->
-                <div v-if="filterSearch.trim() && matchedLabels.length" class="space-y-1">
-                  <div class="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Matching labels</div>
-                  <button
-                    v-for="ml in matchedLabels"
-                    :key="ml.id"
-                    @click="toggleFilterLabel(ml.id)"
-                    class="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-white/10 text-left text-xs"
-                  >
-                    <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: ml.color }"></span>
-                    <span class="flex-1">{{ ml.name }}</span>
-                    <span v-if="filterLabelIds.includes(ml.id)" class="text-indigo-400">✓</span>
-                  </button>
-                </div>
+            <div class="border-t border-white/10"></div>
 
-                <div class="border-t border-white/10"></div>
-
-                <!-- Due Date Filters -->
-                <div>
-                  <div class="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">Due date</div>
-                  <div class="space-y-0.5">
-                    <button
-                      v-for="opt in dueDateOptions"
-                      :key="opt.value"
-                      @click="toggleDueDateFilter(opt.value)"
-                      class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors"
-                      :class="filterDueDate === opt.value ? 'bg-indigo-500/15 text-indigo-300' : 'hover:bg-white/10 text-gray-300'"
-                    >
-                      <span class="flex-1">{{ opt.label }}</span>
-                      <span v-if="filterDueDate === opt.value" class="text-indigo-400">✓</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="border-t border-white/10"></div>
-
-                <!-- Labels -->
-                <div>
-                  <div class="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">Labels</div>
-                  <div class="space-y-0.5">
-                    <button
-                      v-for="gl in globalLabels"
-                      :key="gl.id"
-                      @click="toggleFilterLabel(gl.id)"
-                      class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors"
-                      :class="filterLabelIds.includes(gl.id) ? 'bg-indigo-500/15 text-indigo-300' : 'hover:bg-white/10 text-gray-300'"
-                    >
-                      <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: gl.color }"></span>
-                      <span class="flex-1">{{ gl.name }}</span>
-                      <span v-if="filterLabelIds.includes(gl.id)" class="text-indigo-400">✓</span>
-                    </button>
-                    <div v-if="!globalLabels.length" class="text-xs text-gray-400 px-2 py-1">No labels</div>
-                  </div>
-                </div>
-
-                <!-- Clear Filters -->
-                <div v-if="hasActiveFilters" class="border-t border-white/10 pt-2">
-                  <button
-                    @click="clearFilters"
-                    class="w-full text-center text-xs text-red-400 hover:text-red-300 font-medium py-1"
-                  >
-                    Clear all filters
-                  </button>
-                </div>
+            <!-- Due Date Filters -->
+            <div>
+              <div class="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">Due date</div>
+              <div class="space-y-0.5">
+                <button
+                  v-for="opt in dueDateOptions"
+                  :key="opt.value"
+                  @click="toggleDueDateFilter(opt.value)"
+                  class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors"
+                  :class="filterDueDate === opt.value ? 'bg-indigo-500/15 text-indigo-300' : 'hover:bg-white/10 text-gray-300'"
+                >
+                  <span class="flex-1">{{ opt.label }}</span>
+                  <span v-if="filterDueDate === opt.value" class="text-indigo-400">✓</span>
+                </button>
               </div>
             </div>
-          </div>
-          <div class="text-sm text-gray-400">
-            {{ board?.columns?.length || 0 }} columns &middot;
-            {{ totalTaskCount }} tasks
+
+            <div class="border-t border-white/10"></div>
+
+            <!-- Labels -->
+            <div>
+              <div class="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-1">Labels</div>
+              <div class="space-y-0.5">
+                <button
+                  v-for="gl in globalLabels"
+                  :key="gl.id"
+                  @click="toggleFilterLabel(gl.id)"
+                  class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors"
+                  :class="filterLabelIds.includes(gl.id) ? 'bg-indigo-500/15 text-indigo-300' : 'hover:bg-white/10 text-gray-300'"
+                >
+                  <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: gl.color }"></span>
+                  <span class="flex-1">{{ gl.name }}</span>
+                  <span v-if="filterLabelIds.includes(gl.id)" class="text-indigo-400">✓</span>
+                </button>
+                <div v-if="!globalLabels.length" class="text-xs text-gray-400 px-2 py-1">No labels</div>
+              </div>
+            </div>
+
+            <!-- Clear Filters -->
+            <div v-if="hasActiveFilters" class="border-t border-white/10 pt-2">
+              <button
+                @click="clearFilters"
+                class="w-full text-center text-xs text-red-400 hover:text-red-300 font-medium py-1"
+              >
+                Clear all filters
+              </button>
+            </div>
           </div>
         </div>
       </div>
+    </template>
 
+    <div class="max-w-full mx-auto px-2">
       <!-- Kanban Board -->
       <div
         ref="boardContainer"

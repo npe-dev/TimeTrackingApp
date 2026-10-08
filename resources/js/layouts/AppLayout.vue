@@ -73,8 +73,13 @@
           </router-link>
         </nav>
 
+        <!-- Page-specific header actions (e.g. board filters on Tasks) -->
+        <div class="ml-auto flex items-center gap-2 shrink-0">
+          <slot name="header-actions" />
+        </div>
+
         <!-- Desktop user actions -->
-        <div class="hidden md:flex ml-auto items-center gap-2">
+        <div class="hidden md:flex items-center gap-2">
           <div class="relative">
             <button
               @click="userMenuOpen = !userMenuOpen"
@@ -118,7 +123,7 @@
         <!-- Mobile hamburger -->
         <button
           @click="mobileMenuOpen = !mobileMenuOpen"
-          class="md:hidden ml-auto shrink-0 p-2 -mr-1 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
+          class="md:hidden shrink-0 p-2 -mr-1 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors"
           :aria-expanded="mobileMenuOpen"
           aria-label="Toggle navigation menu"
         >
