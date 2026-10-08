@@ -75,13 +75,38 @@
 
         <!-- Desktop user actions -->
         <div class="hidden md:flex ml-auto items-center gap-2">
-          <router-link
-            to="/profile"
-            class="text-sm font-medium transition-colors"
-            :class="$route.path === '/profile' ? 'text-white' : 'text-gray-300 hover:text-white'"
-          >
-            {{ user?.name }}
-          </router-link>
+          <div class="relative">
+            <button
+              @click="userMenuOpen = !userMenuOpen"
+              class="flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-lg transition-colors"
+              :class="userMenuOpen || isUserMenuRoute ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/10'"
+              :aria-expanded="userMenuOpen"
+            >
+              {{ user?.name }}
+              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <!-- Backdrop closes the menu on outside click -->
+            <div v-if="userMenuOpen" class="fixed inset-0 z-40" @click="userMenuOpen = false"></div>
+
+            <div
+              v-if="userMenuOpen"
+              class="absolute right-0 top-full mt-1 z-50 min-w-[10rem] rounded-xl bg-neutral-800/95 backdrop-blur-md shadow-xl border border-white/10 py-1"
+            >
+              <router-link
+                v-for="link in userMenuLinks"
+                :key="link.to"
+                :to="link.to"
+                @click="userMenuOpen = false"
+                class="block px-3 py-2 text-sm hover:bg-white/10 transition-colors"
+                :class="$route.path === link.to ? 'text-indigo-300 font-medium' : 'text-gray-200'"
+              >
+                {{ link.label }}
+              </router-link>
+            </div>
+          </div>
           <button
             @click="logout"
             class="text-sm text-gray-400 hover:text-red-400 transition-colors px-2 py-1"
@@ -124,18 +149,23 @@
         >
           {{ link.label }}
         </router-link>
-        <div class="mt-1 pt-2 border-t border-white/10 flex items-center justify-between">
+        <div class="mt-1 pt-2 border-t border-white/10 flex flex-col gap-1">
+          <div class="px-4 pt-1 pb-0.5 text-xs uppercase tracking-wide text-gray-400">{{ user?.name }}</div>
           <router-link
-            to="/profile"
+            v-for="link in userMenuLinks"
+            :key="link.to"
+            :to="link.to"
             @click="mobileMenuOpen = false"
-            class="px-4 py-2.5 text-sm font-medium transition-colors"
-            :class="$route.path === '/profile' ? 'text-white' : 'text-gray-300 hover:text-white'"
+            class="px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
+            :class="$route.path === link.to
+              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
+              : 'text-gray-300 hover:bg-white/10 hover:text-white'"
           >
-            {{ user?.name }}
+            {{ link.label }}
           </router-link>
           <button
             @click="logout"
-            class="text-sm text-gray-400 hover:text-red-400 transition-colors px-4 py-2.5"
+            class="text-left text-sm text-gray-400 hover:text-red-400 transition-colors px-4 py-2.5"
           >
             Logout
           </button>
@@ -159,6 +189,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { useBackground } from '@/composables/useBackground';
 import { useBoard } from '@/composables/useBoard';
@@ -168,8 +199,11 @@ const { user, fetchUser, logout } = useAuth();
 const { backgroundUrl } = useBackground();
 const { boards, activeBoardId, loadBoards, setActiveBoard, createBoard } = useBoard();
 
+const route = useRoute();
+
 const boardMenuOpen = ref(false);
 const mobileMenuOpen = ref(false);
+const userMenuOpen = ref(false);
 const shareModalOpen = ref(false);
 
 const activeBoardName = computed(
@@ -214,17 +248,28 @@ const navLinks = computed(() => {
     { to: '/timer', label: 'Timer' },
     { to: '/reports', label: 'Reports' },
   ];
-  // Settings & Automations are owner-only; hide them when the active board is
-  // one shared with the user (they're gated server-side too).
+  // Automations is owner-only; hide it when the active board is one shared
+  // with the user (it's gated server-side too).
+  if (isOwnerActive.value) {
+    links.push({ to: '/automations', label: 'Automation' });
+  }
+  return links;
+});
+
+// Items in the user-name dropdown (top right).
+const userMenuLinks = computed(() => {
+  const links = [{ to: '/profile', label: 'Profile' }];
+  // Settings is owner-only, same as Automations.
   if (isOwnerActive.value) {
     links.push({ to: '/settings', label: 'Settings' });
-    links.push({ to: '/automations', label: 'Automation' });
   }
   if (user.value?.is_admin) {
     links.push({ to: '/admin', label: 'Admin' });
   }
   return links;
 });
+
+const isUserMenuRoute = computed(() => userMenuLinks.value.some(l => l.to === route.path));
 
 const backgroundStyle = computed(() => {
   if (!backgroundUrl.value) return {};
