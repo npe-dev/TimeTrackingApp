@@ -225,7 +225,9 @@ jobs:
               /var/www/html/storage /var/www/html/database
 
             echo "→ Running migrations"
-            docker exec -i timetracking_app php artisan migrate --force
+            # As www-data: run as root, migrate can leave root-owned SQLite -wal/-shm
+            # files behind, making the DB read-only for php-fpm.
+            docker exec -i -u www-data timetracking_app php artisan migrate --force
 
             echo "→ Cleaning up old images"
             docker logout ghcr.io

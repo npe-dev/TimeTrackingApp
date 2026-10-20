@@ -57,6 +57,11 @@ services:
       # The app container owns permission setup on the shared volumes; skip the
       # redundant recursive chown here (see docker/entrypoint.sh).
       - FIX_PERMISSIONS=false
+    # Run as www-data, not root: this process writes to the shared storage/ and
+    # database/ volumes. As root it creates laravel.log and SQLite's -wal/-shm
+    # sidecars root-owned, and php-fpm (www-data) then fails with "laravel.log
+    # ... Permission denied" / "attempt to write a readonly database".
+    user: www-data
     command: php artisan schedule:work
     depends_on:
       # Wait until the app is healthy so its permission fix has completed before
@@ -94,6 +99,8 @@ services:
       # The app container owns permission setup on the shared volumes; skip the
       # redundant recursive chown here (see docker/entrypoint.sh).
       - FIX_PERMISSIONS=false
+    # www-data, not root — see timetracking_scheduler for why.
+    user: www-data
     command: php artisan queue:work --tries=3 --sleep=3 --max-time=3600
     depends_on:
       # Wait until the app is healthy so its permission fix has completed before
