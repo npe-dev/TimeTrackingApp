@@ -20,6 +20,13 @@ RUN apk update && apk add --no-cache \
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_sqlite bcmath gd zip
 
+# Use PHP's production ini. Without any php.ini, PHP defaults to
+# display_errors=On, so startup warnings (e.g. an oversized POST body or too many
+# input vars from a bot) get printed into the response body before Laravel runs —
+# then every header() call fails with "headers already sent" and the request dies
+# with a FatalError. The conf.d overrides below still apply on top of this.
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
 # Configure PHP upload limits
 RUN echo "upload_max_filesize = 40M" > /usr/local/etc/php/conf.d/uploads.ini && \
     echo "post_max_size = 45M" >> /usr/local/etc/php/conf.d/uploads.ini && \
