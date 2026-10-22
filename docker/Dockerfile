@@ -1,4 +1,4 @@
-FROM php:8.4-fpm-alpine
+FROM php:8.5-fpm-alpine
 
 # Install dependencies (including Node.js for asset building)
 RUN apk update && apk add --no-cache \
