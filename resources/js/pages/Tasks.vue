@@ -552,7 +552,7 @@
                   v-else
                   @dblclick="startEditDescription"
                   @click="onDescriptionClick"
-                  class="prose prose-sm prose-invert max-w-none p-3 bg-white/5 rounded-lg min-h-[80px] cursor-text hover:bg-white/10 transition-colors"
+                  class="prose prose-sm prose-invert max-w-none break-words p-3 bg-white/5 rounded-lg min-h-[80px] cursor-text hover:bg-white/10 transition-colors"
                   :class="{ 'text-gray-400 italic': !modalTask.description }"
                   v-html="modalTask.description ? renderMarkdown(modalTask.description) : 'Double-click to add a description...'"
                 ></div>
@@ -1980,7 +1980,7 @@ function renderMarkdown(text) {
       const checked = task[1] !== ' ';
       return '<label class="flex items-start gap-2 text-sm my-0.5">' +
         '<input type="checkbox" disabled' + (checked ? ' checked' : '') + ' class="mt-1 pointer-events-none">' +
-        '<span' + (checked ? ' class="line-through text-gray-400"' : '') + '>' + task[2] + '</span>' +
+        '<span class="min-w-0' + (checked ? ' line-through text-gray-400' : '') + '">' + task[2] + '</span>' +
         '</label>';
     }
     // Unordered list
