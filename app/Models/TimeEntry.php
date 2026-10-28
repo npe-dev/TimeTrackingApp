@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TimeEntry extends Model
 {
-    protected $fillable = ['project_id', 'task_id', 'user_id', 'description', 'start_time', 'end_time', 'last_heartbeat'];
+    protected $fillable = ['project_id', 'task_id', 'board_id', 'user_id', 'description', 'start_time', 'end_time', 'last_heartbeat'];
 
     protected $casts = [
         'start_time' => 'datetime',
@@ -32,20 +32,23 @@ class TimeEntry extends Model
 
     /**
      * Entries belonging to a board: via their project, or, for entries without a
-     * project (card with no project, or project deleted), via their task's column.
+     * project (card with no project, or project deleted), via their task's column,
+     * or, once that card is deleted too, via the board stamped on the entry.
      */
     public function scopeForBoard(Builder $query, int $boardId): Builder
     {
         return $query->where(function ($q) use ($boardId) {
             $q->whereHas('project', fn ($p) => $p->where('board_id', $boardId))
                 ->orWhere(fn ($q) => $q->whereNull('project_id')
-                    ->whereHas('task.column', fn ($c) => $c->where('board_id', $boardId)));
+                    ->whereHas('task.column', fn ($c) => $c->where('board_id', $boardId)))
+                ->orWhere(fn ($q) => $q->whereNull('project_id')->whereNull('task_id')
+                    ->where('time_entries.board_id', $boardId));
         });
     }
 
     /** The board this entry belongs to (see scopeForBoard). */
     public function boardId(): ?int
     {
-        return $this->project?->board_id ?? $this->task?->column?->board_id;
+        return $this->project?->board_id ?? $this->task?->column?->board_id ?? $this->board_id;
     }
 }

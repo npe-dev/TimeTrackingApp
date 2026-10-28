@@ -17,7 +17,8 @@ class ReportController extends Controller
 
         // Entries without a project belong to their card's board (see TimeEntry::scopeForBoard).
         $boardScope = fn ($q, $boardId) => $q->where(fn ($q) => $q->where('p.board_id', $boardId)
-            ->orWhere(fn ($q) => $q->whereNull('e.project_id')->where('c.board_id', $boardId)));
+            ->orWhere(fn ($q) => $q->whereNull('e.project_id')->where('c.board_id', $boardId))
+            ->orWhere(fn ($q) => $q->whereNull('e.project_id')->whereNull('e.task_id')->where('e.board_id', $boardId)));
 
         $minutesExpr = "SUM(CASE WHEN e.end_time IS NULL THEN (julianday('now', 'localtime') - julianday(e.start_time)) * 24 * 60 ELSE (julianday(e.end_time) - julianday(e.start_time)) * 24 * 60 END)";
 

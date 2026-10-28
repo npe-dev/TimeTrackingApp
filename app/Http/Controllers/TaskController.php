@@ -306,6 +306,16 @@ class TaskController extends Controller
     public function destroy(Task $task)
     {
         AutomationService::run('task_deleted', ['task_id' => $task->id, 'column_id' => $task->column_id]);
+
+        // Logged time outlives the card: deleting it (and its subtasks, via cascade)
+        // only nulls task_id, so stamp the board on those entries first, or ones
+        // without a project would drop off the board's Times list and reports.
+        $taskIds = $ids = [$task->id];
+        while ($ids = Task::whereIn('parent_task_id', $ids)->pluck('id')->all()) {
+            $taskIds = array_merge($taskIds, $ids);
+        }
+        TimeEntry::whereIn('task_id', $taskIds)->update(['board_id' => $task->column->board_id]);
+
         $task->delete();
 
         return response()->json(['success' => true]);
