@@ -2098,7 +2098,11 @@ function onGlobalKeydown(event) {
 }
 
 function onFilterKeydown(event) {
-  if (event.key === 'Escape') {
+  if (event.key === 'Enter') {
+    // Apply: keep the typed search and selected filters, just close the panel
+    event.preventDefault();
+    showFilterPanel.value = false;
+  } else if (event.key === 'Escape') {
     event.preventDefault();
     event.stopPropagation();
     if (filterSearch.value) {
