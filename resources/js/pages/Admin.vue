@@ -210,7 +210,7 @@ async function loadUsers() {
 function formatFull(dt) {
   return new Date(dt).toLocaleString([], {
     year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   });
 }
 

@@ -207,18 +207,16 @@
             <div class="grid grid-cols-1 gap-4" :class="{ 'sm:grid-cols-2': !manualForm.running }">
               <div>
                 <label class="block text-sm font-medium text-gray-300 mb-1">Start</label>
-                <input
+                <DateTimeInput
                   v-model="manualForm.start_time"
-                  type="datetime-local"
-                  class="w-full rounded-xl border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  input-class="rounded-xl border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
               </div>
               <div v-if="!manualForm.running">
                 <label class="block text-sm font-medium text-gray-300 mb-1">End</label>
-                <input
+                <DateTimeInput
                   v-model="manualForm.end_time"
-                  type="datetime-local"
-                  class="w-full rounded-xl border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  input-class="rounded-xl border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
               </div>
             </div>
@@ -314,6 +312,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
 import axios from 'axios';
 import AppLayout from '@/layouts/AppLayout.vue';
+import DateTimeInput from '@/components/DateTimeInput.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useApi } from '@/composables/useApi';
 import { useTimer } from '@/composables/useTimer';
@@ -452,7 +451,7 @@ function formatDuration(totalSeconds) {
 function formatTime(datetime) {
   if (!datetime) return '--:--';
   const d = new Date(datetime);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 }
 
 function dateKey(datetime) {

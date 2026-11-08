@@ -243,7 +243,7 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-1">Time</label>
-              <input v-model="reportSettings.time" type="time" class="w-full rounded-lg border border-white/10 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none" />
+              <TimeInput v-model="reportSettings.time" class="w-full rounded-lg border border-white/10 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/40 outline-none" />
             </div>
           </div>
 
@@ -353,6 +353,7 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import TimeInput from '@/components/TimeInput.vue';
 import { useApi } from '@/composables/useApi';
 import { useAuth } from '@/composables/useAuth';
 import { useBoard } from '@/composables/useBoard';

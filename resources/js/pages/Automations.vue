@@ -205,10 +205,9 @@
 
                 <div>
                   <label class="block text-sm font-medium text-gray-300 mb-1">At (time)</label>
-                  <input
+                  <TimeInput
                     v-model="builderForm.trigger.time"
-                    type="time"
-                    class="border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    class="w-24 text-center border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
                 </div>
                 <p class="w-full text-xs text-gray-400">Times are in your local timezone ({{ userTimezone }}).</p>
@@ -574,6 +573,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import TimeInput from '@/components/TimeInput.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useApi } from '@/composables/useApi';
 import { useBoard } from '@/composables/useBoard';
@@ -797,7 +797,7 @@ function closeHistory() {
 function formatRunTime(ts) {
   if (!ts) return '';
   const d = new Date(ts);
-  return isNaN(d) ? ts : d.toLocaleString();
+  return isNaN(d) ? ts : d.toLocaleString([], { hourCycle: 'h23' });
 }
 
 async function deleteAutomation(automation) {
