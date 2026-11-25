@@ -477,12 +477,22 @@
             <div class="p-6 space-y-5">
 
               <!-- Title -->
-              <input
-                v-model="modalTask.title"
-                @input="debouncedSave"
-                placeholder="Task title..."
-                class="w-full text-xl font-bold text-gray-100 border-none outline-none bg-transparent placeholder-gray-500"
-              />
+              <div class="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  class="task-done-checkbox"
+                  :checked="isTaskDone(modalTask)"
+                  :title="isTaskDone(modalTask) ? 'Mark as not done' : 'Mark as done and close'"
+                  @click.prevent="toggleModalTaskDone"
+                />
+                <input
+                  v-model="modalTask.title"
+                  @input="debouncedSave"
+                  placeholder="Task title..."
+                  class="w-full text-xl font-bold border-none outline-none bg-transparent placeholder-gray-500"
+                  :class="isTaskDone(modalTask) ? 'line-through text-gray-500' : 'text-gray-100'"
+                />
+              </div>
 
               <!-- Top Controls Row -->
               <div class="flex flex-wrap items-center gap-3">
@@ -1205,6 +1215,27 @@ async function markTaskDone(task) {
   if (!wasDone) {
     await loadBoard();
   }
+}
+
+// Checkbox next to the title in the open card: toggle done (same as the board
+// card checkbox) and close the card. Pending edits are saved first by close.
+async function toggleModalTaskDone() {
+  const task = modalTask.value;
+  if (!task) return;
+  await closeTaskModal();
+  // Toggle via the board's own card object so the list updates in place.
+  await markTaskDone(findBoardCard(task.id) || task);
+}
+
+function findBoardCard(id) {
+  for (const col of (board.value?.columns || [])) {
+    for (const card of (col.tasks || [])) {
+      if (card.id === id) return card;
+      const sub = (card.subtasks || []).find(st => st.id === id);
+      if (sub) return sub;
+    }
+  }
+  return null;
 }
 
 // ─── Drag & Drop ───────────────────────────────────────────────────
